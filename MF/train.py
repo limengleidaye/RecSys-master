@@ -17,26 +17,6 @@ import warnings
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-
-def plot_metric(history, metric):
-    train_metrics = history.history[metric]
-    val_metrics = history.history['val_' + metric]
-    epochs = range(1, len(train_metrics) + 1)
-
-    plt.figure(figsize=(20, 8), dpi=80)
-
-    plt.plot(epochs, train_metrics, 'bo--')
-    plt.plot(epochs, val_metrics, 'ro-')
-
-    plt.title("Training and validation " + metric)
-    plt.xlabel("Epochs")
-    plt.ylabel(metric)
-    plt.legend(['train_' + metric, 'val_' + metric])
-    # plt.xticks(range(1,21))
-    plt.savefig('./res/mse.png')
-    # plt.show()
-
-
 if __name__ == '__main__':
     # ========================= Hyper Parameters =======================
     # you can modify your file path
@@ -81,7 +61,24 @@ if __name__ == '__main__':
     p,q,user_bias,item_bias=model.get_layer("mf_layer").get_weights()
 
     # ===========================Plot==============================
-    plot_metric(history, "loss")
+    def plot_metric(history, metric):
+        train_metrics = history.history[metric]
+        val_metrics = history.history['val_' + metric]
+        epochs = range(1, len(train_metrics) + 1)
+
+        plt.figure(figsize=(20, 8), dpi=80)
+
+        plt.plot(epochs, train_metrics, 'bo--')
+        plt.plot(epochs, val_metrics, 'ro-')
+
+        plt.title("Training and validation " + metric)
+        plt.xlabel("Epochs")
+        plt.ylabel(metric)
+        plt.legend(['train_' + metric, 'val_' + metric])
+        # plt.xticks(range(1,21))
+        plt.savefig('./res/mse.png')
+        # plt.show()
+    #plot_metric(history, "loss")
 
     # ===========================Save==============================
     #pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
