@@ -41,15 +41,14 @@ if __name__ == '__main__':
     # ========================= Hyper Parameters =======================
     # you can modify your file path
 
-    file = '../data/ml-1m/ratings.dat'
+    file = '../data/ml-100k/u.data'
     test_size = 0.2
     latent_dim = 15
     # use bias
     use_bias = True
     learning_rate = 0.001
     batch_size = 500
-    epochs = 50
-    results = []
+    epochs = 5
 
     output_model_file = os.path.join(".\\res\\model", str(time()))
     callbacks = [keras.callbacks.ModelCheckpoint(output_model_file, save_best_only=True), \
@@ -63,7 +62,7 @@ if __name__ == '__main__':
     model = MF(feature_columns, use_bias)
     model.summary()
     # ============================Compile============================
-    optimizer = SGD(learning_rate=0.01)
+    optimizer = Adam(learning_rate=0.01)
     model.compile(loss='mse', optimizer=optimizer,
                   metrics=['mse'])
     # ==============================Fit==============================
@@ -76,20 +75,18 @@ if __name__ == '__main__':
             validation_split=0.1,  # 验证集比例
             # callbacks = callbacks
         )
-        pred_y = model.predict(test_X)
-        pred_y[pred_y < 1] = 1.
-        pred_y[pred_y > 5] = 5.
-        _ = np.equal(np.round(pred_y).flatten(), test_y)
-        results.append(np.sum(_.astype('int')) / _.size)
+
     # ===========================Test==============================
-
     print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
-    plot_metric(history, "loss")
-    print(results)
-    # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
-    # model.save_weights('./res/',overwrite=True)
-    # print('export saved model.')
+    p,q,user_bias,item_bias=model.get_layer("mf_layer").get_weights()
 
-    df=pd.read_csv('../precision.csv')
-    df['MF_SGD']=results
-    df.to_csv('../precision.csv',index=None)
+    # ===========================Plot==============================
+    plot_metric(history, "loss")
+
+    # ===========================Save==============================
+    #pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
+    #model.save_weights('./res/',overwrite=True)
+    # print('export saved model.')
+    # df=pd.read_csv('../precision.csv')
+    # df['MF_SGD']=results
+    # df.to_csv('../precision.csv',index=None)

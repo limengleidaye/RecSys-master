@@ -6,7 +6,7 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-tf.config.experimental_run_functions_eagerly(True)
+tf.config.run_functions_eagerly(True)
 
 class MF_layer(Layer):
     def __init__(self, user_num, item_num, latent_dim, use_bias=False, user_reg=1e-4, item_reg=1e-4,
@@ -81,11 +81,12 @@ class Noise(Layer):
     def __init__(self, item_num):
         super(Noise, self).__init__()
         self.item_num = item_num
+        self.laplace = [np.random.laplace() for i in range(self.item_num)]
 
     def build(self, input_shape):
         self.noise = self.add_weight(name='noise',
                                      shape=(self.item_num, 1),
-                                     initializer=tf.random_normal_initializer(stddev=0.5,seed=12),
+                                     initializer=tf.constant_initializer(self.laplace),
                                      trainable=False
                                      )
 
@@ -126,7 +127,7 @@ class MF(tf.keras.Model):
         avg_score = dense_inputs
         # bias_0 = tf.reduce_mean(avg_score)
         output = self.mf_layer([user_id, item_id, avg_score])#前一层的输出，前一层的预测
-        #output = self.noise([output, item_id])
+        output = self.noise([output, item_id])
         # print(outputs)
         return output
 

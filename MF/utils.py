@@ -13,7 +13,7 @@ def denseFeature(feat):
 
 def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2):
     np.random.seed(103)
-    data_df = pd.read_csv(file, sep="::", engine='python',
+    data_df = pd.read_csv(file, sep="	", engine='python',
                           names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
     data_df['avg_score'] = data_df.groupby(by='UserId')['Rating'].transform('mean')  # 用户平均得分
 
