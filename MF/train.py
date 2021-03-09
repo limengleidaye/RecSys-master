@@ -86,6 +86,3 @@ if __name__ == '__main__':
     # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
     model.save_weights('./res/my_weights/', overwrite=True)
     # print('export saved model.')
-    # df=pd.read_csv('../precision.csv')
-    # df['MF_SGD']=results
-    # df.to_csv('../precision.csv',index=None)
