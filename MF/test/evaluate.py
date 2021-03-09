@@ -2,6 +2,7 @@ import numpy as np
 from MF.model import MF
 from MF.utils import create_explicit_ml_1m_dataset
 import tensorflow as tf
+import pandas as pd
 
 file = '../../data/ml-1m/ratings.dat'
 test_size = 0.2
@@ -17,6 +18,7 @@ train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model==========================
 model = MF(feature_columns, use_bias)
+model.summary()
 # ============================Compile============================
 optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 model.compile(loss='mse', optimizer=optimizer,
@@ -29,14 +31,17 @@ history = model.fit(
     batch_size=batch_size,
     validation_split=0.1,  # 验证集比例
 )
+
 model.load_weights('../res/my_weights/')
+# print(model.evaluate(test_X,test_y))
 # ========================load weights====================
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
-recommendation = np.matmul(p, q.T)
-recommendation=np.add(recommendation,user_bias)
-recommendation=np.add(recommendation,item_bias.T)
-print(list(recommendation[1]))
-
+data_df = pd.read_csv(file, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
+user_avg = data_df.groupby('UserId')['Rating'].mean().values
+recommendation = np.matmul(p, q.T)[1:,1:]
+recommendation = np.add(np.add(np.add(recommendation, user_bias[1:]),item_bias[1:].T),np.reshape(user_avg,(-1,1))).round()
+recommendation[recommendation>5]=5
+recommendation[recommendation<1]=1
 
 # ========================evaluate=================================
 '''
