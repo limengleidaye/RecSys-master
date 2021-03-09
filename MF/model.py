@@ -6,8 +6,8 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-#tf.config.run_functions_eagerly(True)
-
+#tf.config.experimental_run_functions_eagerly(True)
+np.random.seed(0)
 class MF_layer(Layer):
     def __init__(self, user_num, item_num, latent_dim, use_bias=False, user_reg=1e-4, item_reg=1e-4,
                  user_bias_reg=1e-4, item_bias_reg=1e-4):
@@ -125,7 +125,6 @@ class MF(tf.keras.Model):
         dense_inputs, sparse_inputs = inputs
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
         avg_score = dense_inputs
-        # bias_0 = tf.reduce_mean(avg_score)
         output = self.mf_layer([user_id, item_id, avg_score])#前一层的输出，前一层的预测
         output = self.noise([output, item_id])
         # print(outputs)
