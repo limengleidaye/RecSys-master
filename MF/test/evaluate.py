@@ -17,9 +17,8 @@ train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model==========================
 model = MF(feature_columns, use_bias)
-model.summary()
 # ============================Compile============================
-optimizer = tf.optimizers.SGD(learning_rate=0.01)
+optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
 model.compile(loss='mse', optimizer=optimizer,
               metrics=['mse'])
 # ==============================Fit==============================
@@ -29,26 +28,31 @@ history = model.fit(
     epochs=0,
     batch_size=batch_size,
     validation_split=0.1,  # 验证集比例
-    # callbacks = callbacks
 )
+model.load_weights('../res/my_weights/')
 # ========================load weights====================
-p, q, _, _ = model.get_layer("mf_layer").get_weights()
-recommendation=np.matmul(p, q.T)
+p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
+recommendation = np.matmul(p, q.T)
+recommendation=np.add(recommendation,user_bias)
+recommendation=np.add(recommendation,item_bias.T)
+print(list(recommendation[1]))
 
 
 # ========================evaluate=================================
+'''
+对于每个用户
+    对于测试集中该用户已经观看过的每一部电影：
+        1) 取样该用户从未观看过的100部电影。假定用户没有看过某部电影等于用户与该电影没有关联关系，即感兴趣程度低；
+        2) 推荐系统基于该用户从未观看过的100部电影+测试集中该用户已经观看过的电影，生成按照推荐度从高到低排名的物品列表。取Top-N作为推荐列表
+        3) 计算推荐给用户的Top-N推荐的准确性。即如果测试集用户已经观看过的这1部电影出现在TOP-N推荐中，则计1. 最后统计出一个比例
+        4) 对每个用的TOP-N推荐的准确性进行整合，形成一个总指标。
+'''
 def precision(train, test, N):
     hit = 0
     all = 0
-    for user in train[:,0]:
-        tu = test[user]
-        rank = recommendation[user,:].sort()[:N]
-        for item in rank:
-            if item in tu:
-                hit += 1
-        all += N
+
     return hit / (all * 1.0)
 
-#=========================main===============================
-if __name__ == '__main__':
-    print(precision(train_X,test_X,5))
+# =========================main===============================
+# if __name__ == '__main__':
+# print(precision(train_X,test_X,5))
