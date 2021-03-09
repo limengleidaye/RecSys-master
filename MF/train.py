@@ -58,7 +58,7 @@ if __name__ == '__main__':
 
     # ===========================Test==============================
     print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
-    p,q,user_bias,item_bias=model.get_layer("mf_layer").get_weights()
+    p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 
     # ===========================Plot==============================
     def plot_metric(history, metric):
@@ -78,11 +78,13 @@ if __name__ == '__main__':
         # plt.xticks(range(1,21))
         plt.savefig('./res/mse.png')
         # plt.show()
-    #plot_metric(history, "loss")
+
+
+    # plot_metric(history, "loss")
 
     # ===========================Save==============================
-    #pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
-    model.save_weights('./res/my_weights/',overwrite=True)
+    # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
+    model.save_weights('./res/my_weights/', overwrite=True)
     # print('export saved model.')
     # df=pd.read_csv('../precision.csv')
     # df['MF_SGD']=results

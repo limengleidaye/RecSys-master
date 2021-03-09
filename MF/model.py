@@ -125,7 +125,6 @@ class MF(tf.keras.Model):
         dense_inputs, sparse_inputs = inputs
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
         avg_score = dense_inputs
-        # bias_0 = tf.reduce_mean(avg_score)
         output = self.mf_layer([user_id, item_id, avg_score])#前一层的输出，前一层的预测
         output = self.noise([output, item_id])
         # print(outputs)
