@@ -6,7 +6,7 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-tf.config.run_functions_eagerly(True)
+#tf.config.run_functions_eagerly(True)
 
 class MF_layer(Layer):
     def __init__(self, user_num, item_num, latent_dim, use_bias=False, user_reg=1e-4, item_reg=1e-4,

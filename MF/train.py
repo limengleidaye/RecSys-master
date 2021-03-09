@@ -41,14 +41,14 @@ if __name__ == '__main__':
     # ========================= Hyper Parameters =======================
     # you can modify your file path
 
-    file = '../data/ml-100k/u.data'
+    file = '../data/ml-1m/ratings.dat'
     test_size = 0.2
     latent_dim = 15
     # use bias
     use_bias = True
     learning_rate = 0.001
     batch_size = 500
-    epochs = 5
+    epochs = 100
 
     output_model_file = os.path.join(".\\res\\model", str(time()))
     callbacks = [keras.callbacks.ModelCheckpoint(output_model_file, save_best_only=True), \
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     model = MF(feature_columns, use_bias)
     model.summary()
     # ============================Compile============================
-    optimizer = Adam(learning_rate=0.01)
+    optimizer = SGD(learning_rate=0.01)
     model.compile(loss='mse', optimizer=optimizer,
                   metrics=['mse'])
     # ==============================Fit==============================
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     # ===========================Save==============================
     #pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
-    #model.save_weights('./res/',overwrite=True)
+    model.save_weights('./res/my_weights/',overwrite=True)
     # print('export saved model.')
     # df=pd.read_csv('../precision.csv')
     # df['MF_SGD']=results
