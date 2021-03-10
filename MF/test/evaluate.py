@@ -3,6 +3,7 @@ from MF.model import MF
 from MF.utils import create_explicit_ml_1m_dataset
 import tensorflow as tf
 import pandas as pd
+import random
 
 file = '../../data/ml-1m/ratings.dat'
 test_size = 0.2
@@ -16,32 +17,21 @@ epochs = 100
 feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
 train_X, train_y = train
 test_X, test_y = test
-# ============================Build Model==========================
+# ============================Build Model=========================================
 model = MF(feature_columns, use_bias)
 model.summary()
-# ============================Compile============================
-optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
-model.compile(loss='mse', optimizer=optimizer,
-              metrics=['mse'])
-# ==============================Fit==============================
-history = model.fit(
-    train_X,
-    train_y,
-    epochs=0,
-    batch_size=batch_size,
-    validation_split=0.1,  # 验证集比例
-)
-
+# ========================load weights==================================
 model.load_weights('../res/my_weights/')
-# print(model.evaluate(test_X,test_y))
-# ========================load weights====================
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
+# =========================bulid recommend metrix=======================
 data_df = pd.read_csv(file, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
 user_avg = data_df.groupby('UserId')['Rating'].mean().values
-recommendation = np.matmul(p, q.T)[1:,1:]
-recommendation = np.add(np.add(np.add(recommendation, user_bias[1:]),item_bias[1:].T),np.reshape(user_avg,(-1,1))).round()
-recommendation[recommendation>5]=5
-recommendation[recommendation<1]=1
+recommendation = np.matmul(p, q.T)[1:, 1:]
+recommendation = np.add(np.add(np.add(recommendation, user_bias[1:]), item_bias[1:].T), np.reshape(user_avg, (-1, 1)))
+# recommendation[recommendation>5]=5
+# recommendation[recommendation<1]=1
+rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
+                      columns=range(1, recommendation.shape[0] + 1))
 
 # ========================evaluate=================================
 '''
@@ -52,12 +42,32 @@ recommendation[recommendation<1]=1
         3) 计算推荐给用户的Top-N推荐的准确性。即如果测试集用户已经观看过的这1部电影出现在TOP-N推荐中，则计1. 最后统计出一个比例
         4) 对每个用的TOP-N推荐的准确性进行整合，形成一个总指标。
 '''
-def precision(train, test, N):
-    hit = 0
-    all = 0
 
-    return hit / (all * 1.0)
+
+def preAndrec(train, test, N):
+    hit = 0
+    all_pre = 0
+    all_rec = 0
+    # 统计结果
+    all_items = set(data_df['MovieId'].unique())
+    for user_id in train.index.unique().values:
+        ignore_items = set(train.loc[user_id].values.flatten())
+        test_items = set(test.loc[user_id].values.flatten())
+        #other_items = all_items - (ignore_items)
+        #random_list = random.sample(other_items, 100)
+        sort_values = rec_df[user_id].sort_values(ascending=False)[:N]
+        for idx in sort_values.index.values:
+            if idx in test_items:
+                hit += 1
+        all_pre += N
+        all_rec += len(test_items)
+    return hit / (all_pre * 1.0), hit / (all_rec * 1.0)
+
 
 # =========================main===============================
-# if __name__ == '__main__':
-# print(precision(train_X,test_X,5))
+if __name__ == '__main__':
+    _, test_df = test_X
+    test_index_df = pd.DataFrame(test_df[:, 1], index=test_df[:, 0], columns=['MovieId'])
+    _, train_df = train_X
+    train_index_df = pd.DataFrame(train_df[:, 1], index=train_df[:, 0], columns=['MovieId'])
+    print(preAndrec(train_index_df, test_index_df, 80))

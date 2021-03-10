@@ -49,10 +49,10 @@ if __name__ == '__main__':
     history = model.fit(
         train_X,
         train_y,
-        epochs=1,
+        epochs=50,
         batch_size=batch_size,
         validation_split=0.1,  # 验证集比例
-        #callbacks = callbacks
+        callbacks = callbacks
     )
 
     # ===========================Test==============================
@@ -79,7 +79,7 @@ if __name__ == '__main__':
         # plt.show()
 
 
-    # plot_metric(history, "loss")
+    plot_metric(history, "loss")
 
     # ===========================Save==============================
     # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
