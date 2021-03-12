@@ -18,7 +18,7 @@ def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2):
     data_df['avg_score'] = data_df.groupby(by='UserId')['Rating'].transform('mean')  # 用户平均得分
 
     # 两个隐语义模型的矩阵描述
-    user_num, item_num = data_df['UserId'].max()+1, data_df['MovieId'].max()+1
+    user_num, item_num = data_df['UserId'].max(), data_df['MovieId'].max()
     feature_columns = [[denseFeature('avg_score')],
                        [sparseFeature('user_id', user_num, latent_dim),
                         sparseFeature('item_id', item_num, latent_dim)]]

@@ -3,8 +3,8 @@ import numpy as np
 
 def evaluate_model(model, test, K):
     """
-    evaluate model
-    :param model: model
+    evaluate callbacks
+    :param model: callbacks
     :param test: test set
     :param K: top K
     :return: hit rate, ndcg

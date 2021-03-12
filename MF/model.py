@@ -8,6 +8,8 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 #tf.config.experimental_run_functions_eagerly(True)
 np.random.seed(0)
+
+
 class MF_layer(Layer):
     def __init__(self, user_num, item_num, latent_dim, use_bias=False, user_reg=1e-4, item_reg=1e-4,
                  user_bias_reg=1e-4, item_bias_reg=1e-4):
@@ -58,13 +60,13 @@ class MF_layer(Layer):
         user_id, item_id, avg_score = inputs
 
         # MF
-        latent_user = tf.nn.embedding_lookup(params=self.p, ids=user_id)  # 选取一个张量里面索引对应的元素
-        latent_item = tf.nn.embedding_lookup(params=self.q, ids=item_id)
+        latent_user = tf.nn.embedding_lookup(params=self.p, ids=user_id-1)  # 选取一个张量里面索引对应的元素
+        latent_item = tf.nn.embedding_lookup(params=self.q, ids=item_id-1)
         outputs = tf.reduce_sum(tf.multiply(latent_user, latent_item), axis=1, keepdims=True)  # 用户对物品的评分
         # print(tf.shape(outputs))
         # MF-bias
-        user_bias = tf.nn.embedding_lookup(params=self.user_bias, ids=user_id)
-        item_bias = tf.nn.embedding_lookup(params=self.item_bias, ids=item_id)
+        user_bias = tf.nn.embedding_lookup(params=self.user_bias, ids=user_id-1)
+        item_bias = tf.nn.embedding_lookup(params=self.item_bias, ids=item_id-1)
         bias = tf.reshape((avg_score + user_bias + item_bias), shape=(-1, 1))
         # use bias
         outputs = bias + outputs if self.use_bias else outputs
@@ -92,7 +94,7 @@ class Noise(Layer):
 
     def call(self, inputs):
         output, item_id = inputs
-        add_noise = tf.nn.embedding_lookup(params=self.noise, ids=item_id)
+        add_noise = tf.nn.embedding_lookup(params=self.noise, ids=item_id-1)
         output += add_noise
         return output
 
@@ -125,14 +127,11 @@ class MF(tf.keras.Model):
         dense_inputs, sparse_inputs = inputs
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
         avg_score = dense_inputs
-        output = self.mf_layer([user_id, item_id, avg_score])#前一层的输出，前一层的预测
-        output = self.noise([output, item_id])
-        # print(outputs)
+        output = self.mf_layer([user_id, item_id, avg_score])  # 前一层的输出，前一层的预测
+        #output = self.noise([output, item_id])
         return output
 
     def summary(self):
         dense_inputs = tf.keras.Input(shape=(len(self.dense_feature_columns),), dtype=tf.float32)
         sparse_inputs = tf.keras.Input(shape=(len(self.sparse_feature_columns),), dtype=tf.int32)
         tf.keras.Model(inputs=[dense_inputs, sparse_inputs], outputs=self.call([dense_inputs, sparse_inputs])).summary()
-
-

@@ -10,9 +10,6 @@ test_size = 0.2
 latent_dim = 15
 # use bias
 use_bias = True
-learning_rate = 0.001
-batch_size = 500
-epochs = 100
 # ========================== Create dataset =======================
 feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
 train_X, train_y = train
@@ -21,13 +18,16 @@ test_X, test_y = test
 model = MF(feature_columns, use_bias)
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/')
+model.load_weights('../res/my_weights/without_noise/')  # with bias(avg+user_bias+item_bias)
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
+model.compile(loss='mse', optimizer=tf.keras.optimizers.SGD(), metrics=['mse'])
+#print("model's sqrt: %f" % np.sqrt(model.evaluate(test_X, test_y)[1]))
 # =========================bulid recommend metrix=======================
 data_df = pd.read_csv(file, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
 user_avg = data_df.groupby('UserId')['Rating'].mean().values
-recommendation = np.matmul(p, q.T)[1:, 1:]
-recommendation = np.add(np.add(np.add(recommendation, user_bias[1:]), item_bias[1:].T), np.reshape(user_avg, (-1, 1)))
+recommendation = np.dot(p, q.T)
+recommendation = np.add(np.add(np.add(recommendation, user_bias), item_bias.T),
+                        np.reshape(user_avg, (-1, 1)))  # with bias
 # recommendation[recommendation>5]=5
 # recommendation[recommendation<1]=1
 rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
@@ -49,15 +49,16 @@ def preAndrec(train, test, N):
     all_pre = 0
     all_rec = 0
     # 统计结果
-    all_items = set(data_df['MovieId'].unique())
-    for user_id in train.index.unique().values:
+    # all_items = set(data_df['MovieId'].unique())
+    for user_id in test.index.unique().values:
         ignore_items = set(train.loc[user_id].values.flatten())
         test_items = set(test.loc[user_id].values.flatten())
-        #other_items = all_items - (ignore_items)
-        #random_list = random.sample(other_items, 100)
-        sort_values = rec_df[user_id].sort_values(ascending=False)[:N]
-        for idx in sort_values.index.values:
-            if idx in test_items:
+        # other_items = all_items - ignore_items
+        # random_list = random.sample(other_items, 1000)
+        other_items = rec_df[user_id].drop(labels=ignore_items).sample(n=1000)
+        sort_values = other_items.sort_values(ascending=False)[:N]
+        for idx in test_items:
+            if idx in sort_values.index.values:
                 hit += 1
         all_pre += N
         all_rec += len(test_items)
@@ -68,6 +69,8 @@ def preAndrec(train, test, N):
 if __name__ == '__main__':
     _, test_df = test_X
     test_index_df = pd.DataFrame(test_df[:, 1], index=test_df[:, 0], columns=['MovieId'])
+    test_y_index_df = pd.Series(test_y, index=test_index_df.index)
+    test_index_df.drop(index=test_y_index_df[test_y_index_df < 5].index, inplace=True)
     _, train_df = train_X
     train_index_df = pd.DataFrame(train_df[:, 1], index=train_df[:, 0], columns=['MovieId'])
-    print(preAndrec(train_index_df, test_index_df, 80))
+    print(preAndrec(train_index_df, test_index_df, 50))

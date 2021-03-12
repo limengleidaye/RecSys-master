@@ -30,7 +30,7 @@ if __name__ == '__main__':
     batch_size = 500
     epochs = 50
 
-    output_model_file = os.path.join(".\\res\\model", str(time()))
+    output_model_file = os.path.join(".\\res\\callbacks", str(time()))
     callbacks = [keras.callbacks.ModelCheckpoint(output_model_file, save_best_only=True), \
                  keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)]
 
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
-    model = MF(feature_columns, use_bias)
+    model = MF(feature_columns, use_bias=use_bias)
     model.summary()
     # ============================Compile============================
     optimizer = Adam(learning_rate=learning_rate)
@@ -49,14 +49,14 @@ if __name__ == '__main__':
     history = model.fit(
         train_X,
         train_y,
-        epochs=50,
+        epochs=epochs,
         batch_size=batch_size,
         validation_split=0.1,  # 验证集比例
         callbacks = callbacks
     )
 
     # ===========================Test==============================
-    #print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
+    print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
     #p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 
     # ===========================Plot==============================
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         plt.ylabel(metric)
         plt.legend(['train_' + metric, 'val_' + metric])
         # plt.xticks(range(1,21))
-        plt.savefig('./res/mse.png')
+        #plt.savefig('./res/mse_without_bias.png')
         # plt.show()
 
 
@@ -83,5 +83,5 @@ if __name__ == '__main__':
 
     # ===========================Save==============================
     # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
-    model.save_weights('./res/my_weights/')
-    # print('export saved model.')
+    model.save_weights('./res/my_weights/without_noise/')
+    # print('export saved callbacks.')
