@@ -83,5 +83,5 @@ if __name__ == '__main__':
 
     # ===========================Save==============================
     # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
-    model.save_weights('./res/my_weights/without_noise/')
+    model.save_weights('./res/my_weights/with_all/')
     # print('export saved callbacks.')
