@@ -5,7 +5,7 @@ plt.rcParams['font.family'] = ['sans-serif']
 plt.rcParams['font.sans-serif'] = ['SimHei']
 
 df=pd.read_csv('/MF/res/log_noise.csv', engine='python')
-df_non_noise=pd.read_csv('/MF/res/log_non_noise.csv', engine='python')
+df_non_noise=pd.read_csv('/MF/res/log_without_noise.csv', engine='python')
 
 loss=df['val_loss']
 loss_non_noise=df_non_noise['val_loss']

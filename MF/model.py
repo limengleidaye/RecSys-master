@@ -83,7 +83,7 @@ class Noise(Layer):
     def __init__(self, item_num):
         super(Noise, self).__init__()
         self.item_num = item_num
-        self.laplace = [np.random.laplace() for i in range(self.item_num)]
+        self.laplace = np.random.laplace(size=self.item_num)
 
     def build(self, input_shape):
         self.noise = self.add_weight(name='noise',
@@ -128,7 +128,7 @@ class MF(tf.keras.Model):
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
         avg_score = dense_inputs
         output = self.mf_layer([user_id, item_id, avg_score])  # 前一层的输出，前一层的预测
-        output = self.noise([output, item_id])
+        #output = self.noise([output, item_id])
         return output
 
     def summary(self):

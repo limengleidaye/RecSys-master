@@ -18,7 +18,7 @@ test_X, test_y = test
 model = MF(feature_columns, use_bias)
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/with_all/')  # with bias(avg+user_bias+item_bias)
+model.load_weights('../res/my_weights/MF/')  # with bias(avg+user_bias+item_bias)
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 model.compile(loss='mse', optimizer=tf.keras.optimizers.SGD(), metrics=['mse'])
 # print("model's sqrt: %f" % np.sqrt(model.evaluate(test_X, test_y)[1]))
@@ -51,12 +51,12 @@ def preAndrec(train, test, N):
     # 统计结果
     # all_items = set(data_df['MovieId'].unique())
     for user_id in test.index.unique().values:
-        ignore_items = set(train.loc[user_id].values.flatten())
+        train_items = set(train.loc[user_id].values.flatten())
         test_items = set(test.loc[user_id].values.flatten())
         # other_items = all_items - ignore_items
         # random_list = random.sample(other_items, 1000)
-        other_items = rec_df[user_id].loc[ignore_items.union(test_items)]
-        sort_values = other_items.sort_values(ascending=False)[:N]
+        other_items = rec_df[user_id].loc[train_items.union(test_items)]
+        sort_values = rec_df[user_id].sort_values(ascending=False)[:N]
         hit += len(test_items & set(sort_values.index.values))
         all_pre += N
         all_rec += len(test_items)
@@ -71,4 +71,20 @@ if __name__ == '__main__':
     test_index_df.drop(index=test_y_index_df[test_y_index_df < 4].index, inplace=True)
     _, train_df = train_X
     train_index_df = pd.DataFrame(train_df[:, 1], index=train_df[:, 0], columns=['MovieId'])
-    print(preAndrec(train_index_df, test_index_df, 30))
+    N=[5,10,20,30,50]
+    precision=[]
+    recall=[]
+    for i in N:
+        p ,r = preAndrec(train_index_df, test_index_df, i)
+        precision.append(p)
+        recall.append(r)
+    print(precision)
+    print(recall)
+    '''
+    pre_dataFrame = pd.read_csv('../../precision.csv', engine='python')
+    rec_dataFrame = pd.read_csv('../../recall.csv', engine='python')
+    pre_dataFrame['MF_noise']=precision
+    rec_dataFrame['MF_noise']=recall
+    pre_dataFrame.to_csv('../../precision.csv',index=False)
+    rec_dataFrame.to_csv('../../recall.csv',index=False)'''
+
