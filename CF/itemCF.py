@@ -14,12 +14,14 @@ class ItemBasedCF():
         self.n_rec_movie = [5, 10, 20, 30, 50]
 
         # 将数据集划分为训练集和测试集
-        self.trainSet = {}
+        self.trainSet = {}#{user:{movie1:ratings1,movie2:ratings2,……}}
         self.testSet = {}
 
-        # 用户相似度矩阵
-        self.movie_sim_matrix = {}
-        self.movie_popular = {}
+        # 电影相似度矩阵
+        self.movie_sim_matrix = {}#{movie1:{movie2:sim,movie3:sim,……}}
+        #电影流行度/喜欢的用户数量
+        self.movie_popular = {}#{movie1:count1,movie2:count2,……}
+        #训练集电影数量
         self.movie_count = 0
 
         print('Similar movie number = %d' % self.n_sim_movie)
@@ -43,12 +45,15 @@ class ItemBasedCF():
         print('TrainSet = %s' % trainSet_len)
         print('TestSet = %s' % testSet_len)
 
+
     # 读文件，返回文件的每一行
     def load_file(self, filename):
         with open(filename, 'r') as f:
             for i, line in enumerate(f):
+                '''
                 if i == 0:  # 去掉文件第一行的title
                     continue
+                '''
                 yield line.strip('\r\n')
         print('Load %s success!' % filename)
 
@@ -87,16 +92,17 @@ class ItemBasedCF():
     # 针对目标用户U，找到K部相似的电影，并推荐其N部电影
     def recommend(self, user, N):
         K = self.n_sim_movie
-        rank = {}
-        watched_movies = self.trainSet[user]
+        rank = {}#{related_movie1:r1,related_movie2:r2,……}
+        watched_movies = self.trainSet[user]#{movie1:ratings1,movie2:ratings2,……}
 
         for movie, rating in watched_movies.items():
             for related_movie, w in sorted(self.movie_sim_matrix[movie].items(), key=itemgetter(1), reverse=True)[:K]:
                 if related_movie in watched_movies:
                     continue
                 rank.setdefault(related_movie, 0)
-                rank[related_movie] += w * float(rating)
+                rank[related_movie] += w * float(rating)#预测评分=w1*r1+w2*r2+……
         return sorted(rank.items(), key=itemgetter(1), reverse=True)[:N]
+
 
     # 产生推荐并通过准确率、召回率和覆盖率进行评估
     def evaluate(self):
