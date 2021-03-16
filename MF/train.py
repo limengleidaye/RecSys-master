@@ -82,6 +82,6 @@ if __name__ == '__main__':
     plot_metric(history, "loss")
 
     # ===========================Save==============================
-    # pd.DataFrame(history.history).to_csv('./res/log_SGD.csv',index=False)
-    model.save_weights('./res/my_weights/without_noise/')
+    pd.DataFrame(history.history).to_csv('./res/log/MF.csv',index=False)
+    model.save_weights('./res/my_weights/MF/')
     # print('export saved callbacks.')

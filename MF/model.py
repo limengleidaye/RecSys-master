@@ -83,7 +83,7 @@ class Noise(Layer):
     def __init__(self, item_num):
         super(Noise, self).__init__()
         self.item_num = item_num
-        self.laplace = [np.random.laplace() for i in range(self.item_num)]
+        self.laplace = np.random.laplace(size=self.item_num)
 
     def build(self, input_shape):
         self.noise = self.add_weight(name='noise',
