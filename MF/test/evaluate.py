@@ -9,16 +9,16 @@ file = '../../data/ml-1m/ratings.dat'
 test_size = 0.2
 latent_dim = 15
 # use bias
-use_bias = True
+use_bias = False
 # ========================== Create dataset =======================
 feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
 train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model=========================================
-model = MF(feature_columns, use_bias)
+model = MF(feature_columns, use_bias=use_bias)
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/MF_noise/')  # with bias(avg+user_bias+item_bias)
+model.load_weights('../res/my_weights/MF-1.0/')  # with bias(avg+user_bias+item_bias)
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 model.compile(loss='mse', optimizer=tf.keras.optimizers.SGD(), metrics=['mse'])
 # print("model's sqrt: %f" % np.sqrt(model.evaluate(test_X, test_y)[1]))
@@ -28,8 +28,6 @@ user_avg = data_df.groupby('UserId')['Rating'].mean().values
 recommendation = np.dot(p, q.T)
 recommendation = np.add(np.add(np.add(recommendation, user_bias), item_bias.T),
                         np.reshape(user_avg, (-1, 1)))  # with bias
-# recommendation[recommendation>5]=5
-# recommendation[recommendation<1]=1
 rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
                       columns=range(1, recommendation.shape[0] + 1))
 
@@ -83,7 +81,7 @@ if __name__ == '__main__':
     '''
     pre_dataFrame = pd.read_csv('../../precision.csv', engine='python')
     rec_dataFrame = pd.read_csv('../../recall.csv', engine='python')
-    pre_dataFrame['MF_noise']=precision
-    rec_dataFrame['MF_noise']=recall
+    pre_dataFrame['MF_noise-old']=precision
+    rec_dataFrame['MF_noise-old']=recall
     pre_dataFrame.to_csv('../../precision.csv',index=False)
     rec_dataFrame.to_csv('../../recall.csv',index=False)'''

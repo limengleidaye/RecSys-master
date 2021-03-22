@@ -25,7 +25,7 @@ if __name__ == '__main__':
     test_size = 0.2
     latent_dim = 15
     # use bias
-    use_bias = True
+    use_bias = False
     learning_rate = 0.01
     batch_size = 500
     epochs = 50
@@ -82,6 +82,6 @@ if __name__ == '__main__':
     plot_metric(history, "loss")
 
     # ===========================Save==============================
-    pd.DataFrame(history.history).to_csv('./res/log/MF.csv',index=False)
-    model.save_weights('./res/my_weights/MF/')
+    #pd.DataFrame(history.history).to_csv('./res/log/MF.csv',index=False)
+    model.save_weights('./res/my_weights/MF-1.0/')
     # print('export saved callbacks.')
