@@ -1,6 +1,6 @@
 import numpy as np
 from MF.model import MF
-from MF.utils import create_explicit_ml_1m_dataset
+from MF.utils import DataSet
 import tensorflow as tf
 import pandas as pd
 import random
@@ -9,27 +9,26 @@ file = '../../data/ml-1m/ratings.dat'
 test_size = 0.2
 latent_dim = 15
 # use bias
-use_bias = True
+use_bias = False
 # ========================== Create dataset =======================
-feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
+dataset = DataSet(file=file)
+feature_columns, train, test = dataset.create_explicit_ml_1m_dataset(latent_dim, test_size, add_noise=True)
 train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model=========================================
-model = MF(feature_columns, use_bias)
+model = MF(feature_columns, use_bias=use_bias)
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/MF/')  # with bias(avg+user_bias+item_bias)
+model.load_weights('../res/my_weights/MF-1.0/')  # with bias(avg+user_bias+item_bias)
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
-model.compile(loss='mse', optimizer=tf.keras.optimizers.SGD(), metrics=['mse'])
-# print("model's sqrt: %f" % np.sqrt(model.evaluate(test_X, test_y)[1]))
 # =========================bulid recommend metrix=======================
-data_df = pd.read_csv(file, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
-user_avg = data_df.groupby('UserId')['Rating'].mean().values
+data_df = dataset.get_dataDf(True)
 recommendation = np.dot(p, q.T)
-recommendation = np.add(np.add(np.add(recommendation, user_bias), item_bias.T),
-                        np.reshape(user_avg, (-1, 1)))  # with bias
-# recommendation[recommendation>5]=5
-# recommendation[recommendation<1]=1
+#=============加平均值=======================================
+recommendation += data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index('UserId').values
+recommendation += data_df[['MovieId', 'item_avg_score']].drop_duplicates().set_index('MovieId').sort_index().reindex(
+    index=range(1, data_df['MovieId'].max() + 1), fill_value=0).values.flatten()
+
 rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
                       columns=range(1, recommendation.shape[0] + 1))
 
@@ -106,7 +105,7 @@ if __name__ == '__main__':
 '''
     pre_dataFrame = pd.read_csv('../../precision.csv', engine='python')
     rec_dataFrame = pd.read_csv('../../recall.csv', engine='python')
-    pre_dataFrame['MF_noise'] = precision
-    rec_dataFrame['MF_noise'] = recall
-    pre_dataFrame.to_csv('../../precision.csv', index=False)
-    rec_dataFrame.to_csv('../../recall.csv', index=False)'''
+    pre_dataFrame['MF_noise']=precision
+    rec_dataFrame['MF_noise']=recall
+    pre_dataFrame.to_csv('../../precision.csv',index=False)
+    rec_dataFrame.to_csv('../../recall.csv',index=False)'''
