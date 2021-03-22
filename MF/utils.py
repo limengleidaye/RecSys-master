@@ -52,7 +52,7 @@ def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2, epsilon=1):
 
     test_df = test_df.reset_index()
     train_df = data_df.drop(labels=test_df['index'])
-    train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=0.9).reset_index(drop=True)
+    train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
     test_df = test_df.drop(['index', 'Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
 
     train_X = train_df[['UserId', 'MovieId']].values  # 训练集X：用户ID，物品ID
