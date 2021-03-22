@@ -42,7 +42,7 @@ if __name__ == '__main__':
     model = MF(feature_columns, use_bias=use_bias)
     model.summary()
     # ============================Compile============================
-    optimizer = Adam(learning_rate=learning_rate)
+    optimizer = SGD(learning_rate=learning_rate)
     model.compile(loss='mse', optimizer=optimizer,
                   metrics=['mse'])
     # ==============================Fit==============================
