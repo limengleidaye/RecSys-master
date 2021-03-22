@@ -1,6 +1,6 @@
 import numpy as np
 from MF.model import MF
-from MF.utils import create_explicit_ml_1m_dataset
+from MF.utils import DataSet
 import tensorflow as tf
 import pandas as pd
 import random
@@ -11,7 +11,8 @@ latent_dim = 15
 # use bias
 use_bias = False
 # ========================== Create dataset =======================
-feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
+dataset = DataSet()
+feature_columns, train, test = dataset.create_explicit_ml_1m_dataset(file, latent_dim, test_size)
 train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model=========================================
@@ -20,14 +21,11 @@ model.summary()
 # ========================load weights==================================
 model.load_weights('../res/my_weights/MF-1.0/')  # with bias(avg+user_bias+item_bias)
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
-model.compile(loss='mse', optimizer=tf.keras.optimizers.SGD(), metrics=['mse'])
-# print("model's sqrt: %f" % np.sqrt(model.evaluate(test_X, test_y)[1]))
 # =========================bulid recommend metrix=======================
-data_df = pd.read_csv(file, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
-user_avg = data_df.groupby('UserId')['Rating'].mean().values
+data_df = dataset.get_dataDf()
 recommendation = np.dot(p, q.T)
-recommendation = np.add(np.add(np.add(recommendation, user_bias), item_bias.T),
-                        np.reshape(user_avg, (-1, 1)))  # with bias
+recommendation = np.add(np.add(np.add(recommendation, ), item_bias.T),
+                        np.reshape(data_df, (-1, 1)))  # with bias
 rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
                       columns=range(1, recommendation.shape[0] + 1))
 

@@ -9,7 +9,7 @@ import pandas as pd
 import tensorflow as tf
 
 from model import MF
-from utils import create_explicit_ml_1m_dataset
+from utils import DataSet
 
 import os
 import warnings
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                  keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)]
 
     # ========================== Create dataset =======================
-    feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
+    feature_columns, train, test = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size)
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
