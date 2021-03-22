@@ -35,7 +35,7 @@ if __name__ == '__main__':
                  keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)]
 
     # ========================== Create dataset =======================
-    feature_columns, train, test = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size)
+    feature_columns, train, test = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size,add_noise=True)
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================

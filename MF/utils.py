@@ -50,6 +50,11 @@ class DataSet:
     def create_explicit_ml_1m_dataset(self, latent_dim=4, test_size=0.2, add_noise=False):
         if add_noise == True:
             self.global_effect()
+        else:
+            item_avg = self.data_df.groupby(by='MovieId')['Rating'].transform('mean')
+            self.data_df['Rating'] -= item_avg
+            user_avg = self.data_df.groupby(by='UserId')['Rating'].transform('mean').clip(-2, 2)
+            self.data_df['Rating'] = self.data_df['Rating'] - user_avg - item_avg
 
         # 两个隐语义模型的矩阵描述
         user_num, item_num = self.data_df['UserId'].max(), self.data_df['MovieId'].max()
@@ -77,6 +82,5 @@ class DataSet:
         test_y = test_df['Rating'].values.astype('int32')
         return feature_columns, (train_X, train_y), (test_X, test_y)
 
-    def get_dataDf(self):
-        self.global_effect()
+    def get_dataDf(self,add_noise):
         return self.data_df

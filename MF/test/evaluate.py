@@ -11,8 +11,8 @@ latent_dim = 15
 # use bias
 use_bias = False
 # ========================== Create dataset =======================
-dataset = DataSet()
-feature_columns, train, test = dataset.create_explicit_ml_1m_dataset(file, latent_dim, test_size)
+dataset = DataSet(file=file)
+feature_columns, train, test = dataset.create_explicit_ml_1m_dataset(latent_dim, test_size, add_noise=True)
 train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model=========================================
@@ -22,10 +22,13 @@ model.summary()
 model.load_weights('../res/my_weights/MF-1.0/')  # with bias(avg+user_bias+item_bias)
 p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 # =========================bulid recommend metrix=======================
-data_df = dataset.get_dataDf()
+data_df = dataset.get_dataDf(True)
 recommendation = np.dot(p, q.T)
-recommendation = np.add(np.add(np.add(recommendation, ), item_bias.T),
-                        np.reshape(data_df, (-1, 1)))  # with bias
+#=============加平均值=======================================
+recommendation += data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index('UserId').values
+recommendation += data_df[['MovieId', 'item_avg_score']].drop_duplicates().set_index('MovieId').sort_index().reindex(
+    index=range(1, data_df['MovieId'].max() + 1), fill_value=0).values.flatten()
+
 rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
                       columns=range(1, recommendation.shape[0] + 1))
 
@@ -72,9 +75,9 @@ if __name__ == '__main__':
     recall = []
     for i in N:
         p, r = preAndrec(train_index_df, test_index_df, i)
-        precision.append(p)
+        # precision.append(p)
         recall.append(r)
-    print(precision)
+    # print(precision)
     print(recall)
     '''
     pre_dataFrame = pd.read_csv('../../precision.csv', engine='python')
