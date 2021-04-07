@@ -8,7 +8,7 @@ from time import time
 import pandas as pd
 import tensorflow as tf
 
-from model import MF
+from model import MyModel
 from utils import DataSet
 
 import os
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
-    model = MF(feature_columns, use_bias=use_bias)
+    model = MyModel(feature_columns, use_bias=use_bias)
     model.summary()
     # ============================Compile============================
     optimizer = SGD(learning_rate=learning_rate)

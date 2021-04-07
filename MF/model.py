@@ -10,6 +10,62 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 np.random.seed(0)
 
 
+class LR_layer(Layer):
+    def __init__(self, user_num, item_num, item_hs, user_hs):
+        # x_u:indicates the highest score for the historical scores of the item
+        # x_i:highest rated score in user u’s historical scores
+        super(LR_layer, self).__init__()
+        self.user_num = user_num
+        self.item_num = item_num
+        self.x_u = item_hs
+        self.x_i = user_hs
+
+    def build(self, input_shape):
+        self.beta_u = self.add_weight(name='beta_user_vector',
+                                      shape=self.user_num,
+                                      initializer=tf.random_normal_initializer(seed=0),
+                                      trainable=True)
+        self.bias_u = self.add_weight(name='bias_user_vector',
+                                      shape=self.user_num,
+                                      initializer=tf.random_normal_initializer(seed=0),
+                                      trainable=True)
+        self.beta_i = self.add_weight(name='beta_item_vector',
+                                      shape=self.item_num,
+                                      initializer=tf.random_normal_initializer(seed=0),
+                                      trainable=True)
+        self.bias_i = self.add_weight(name='bias_item_vector',
+                                      shape=self.item_num,
+                                      initializer=tf.random_normal_initializer(seed=0),
+                                      trainable=True)
+
+        self.user_weight = self.add_weight(name='user_weight',
+                                           shape=(self.user_num, 1),
+                                           initializer=tf.random_normal_initializer(seed=0),
+                                           trainable=True)
+        self.item_weight = self.add_weight(name='item_weight',
+                                           shape=(self.item_num, 1),
+                                           initializer=tf.random_normal_initializer(seed=0),
+                                           trainable=True)
+
+    def call(self, inputs, **kwargs):
+        user_id, item_id = inputs
+        Xu = tf.nn.embedding_lookup(params=self.x_u, ids=item_id - 1)
+        user_beta = tf.nn.embedding_lookup(params=self.beta_u, ids=user_id)
+        user_bias = tf.nn.embedding_lookup(params=self.bias_u, ids=user_id)
+        Xi = tf.nn.embedding_lookup(params=self.x_i, ids=user_id - 1)
+        item_beta = tf.nn.embedding_lookup(params=self.beta_i, ids=item_id)
+        item_bias = tf.nn.embedding_lookup(params=self.bias_i, ids=item_id)
+        a = tf.nn.embedding_lookup(params=self.user_weight, ids=user_id)
+        b = tf.nn.embedding_lookup(params=self.item_weight, ids=item_id)
+        Yu = tf.multiply(user_beta, Xu) + user_bias
+        Yi = tf.multiply(item_beta, Xi) + item_bias
+        outputs = tf.multiply(a, Yu) + tf.multiply(b, Yi)
+        return outputs
+
+    def summary(self):
+        pass
+
+
 class MF_layer(Layer):
     def __init__(self, user_num, item_num, latent_dim, use_bias=False, user_reg=1e-4, item_reg=1e-4,
                  user_bias_reg=1e-4, item_bias_reg=1e-4):
@@ -63,7 +119,7 @@ class MF_layer(Layer):
         latent_user = tf.nn.embedding_lookup(params=self.p, ids=user_id - 1)  # 选取一个张量里面索引对应的元素
         latent_item = tf.nn.embedding_lookup(params=self.q, ids=item_id - 1)
         outputs = tf.reduce_sum(tf.multiply(latent_user, latent_item), axis=1, keepdims=True)  # 用户对物品的评分
-        # print(tf.shape(outputs))
+
         # MF-old-bias
         user_bias = tf.nn.embedding_lookup(params=self.user_bias, ids=user_id - 1)
         item_bias = tf.nn.embedding_lookup(params=self.item_bias, ids=item_id - 1)
@@ -79,7 +135,7 @@ class MF_layer(Layer):
         tf.keras.Model(inputs=[user_id, item_id, avg_score], outputs=self.call([user_id, item_id, avg_score])).summary()
 
 
-class MF(tf.keras.Model):
+class MyModel(tf.keras.Model):
     def __init__(self, feature_columns, implicit=False, use_bias=True, user_reg=1e-4, item_reg=1e-4,
                  user_bias_reg=1e-4, item_bias_reg=1e-4):
         """
@@ -92,7 +148,7 @@ class MF(tf.keras.Model):
         :param user_bias_reg: regularization of user bias
         :param item_bias_reg: regularization of item bias
         """
-        super(MF, self).__init__()
+        super(MyModel, self).__init__()
         self.sparse_feature_columns = feature_columns
         # print(feature_columns)
         num_users, num_items = self.sparse_feature_columns[0]['feat_num'], \
