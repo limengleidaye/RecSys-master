@@ -5,36 +5,41 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-# tf.config.experimental_run_functions_eagerly(True)
+tf.config.experimental_run_functions_eagerly(True)
 np.random.seed(0)
 
 
 class LR_layer(Layer):
-    def __init__(self, user_num, item_num, item_hs, user_hs):
+    def __init__(self, user_num, item_num, highest_score):
         # x_u:indicates the highest score for the historical scores of the item
         # x_i:highest rated score in user u’s historical scores
         super(LR_layer, self).__init__()
         self.user_num = user_num
         self.item_num = item_num
-        self.x_u = item_hs
-        self.x_i = user_hs
+        user_hs, item_hs = highest_score
+
 
     def build(self, input_shape):
+        self.x_u = tf.constant(self.user_hs,
+                               name='user_highest_score'
+                               )
+        self.x_i = tf.constant(self.item_hs,
+                               name='item_highest_score'
+                               )
         self.beta_u = self.add_weight(name='beta_user_vector',
-                                      shape=self.user_num,
+                                      shape=(self.user_num, 1),
                                       initializer=tf.random_normal_initializer(seed=0),
                                       trainable=True)
         self.bias_u = self.add_weight(name='bias_user_vector',
-                                      shape=self.user_num,
+                                      shape=(self.user_num, 1),
                                       initializer=tf.random_normal_initializer(seed=0),
                                       trainable=True)
         self.beta_i = self.add_weight(name='beta_item_vector',
-                                      shape=self.item_num,
+                                      shape=(self.item_num, 1),
                                       initializer=tf.random_normal_initializer(seed=0),
                                       trainable=True)
         self.bias_i = self.add_weight(name='bias_item_vector',
-                                      shape=self.item_num,
+                                      shape=(self.item_num, 1),
                                       initializer=tf.random_normal_initializer(seed=0),
                                       trainable=True)
 
@@ -49,21 +54,26 @@ class LR_layer(Layer):
 
     def call(self, inputs, **kwargs):
         user_id, item_id = inputs
-        Xu = tf.nn.embedding_lookup(params=self.x_u, ids=item_id - 1)
-        user_beta = tf.nn.embedding_lookup(params=self.beta_u, ids=user_id)
-        user_bias = tf.nn.embedding_lookup(params=self.bias_u, ids=user_id)
-        Xi = tf.nn.embedding_lookup(params=self.x_i, ids=user_id - 1)
-        item_beta = tf.nn.embedding_lookup(params=self.beta_i, ids=item_id)
-        item_bias = tf.nn.embedding_lookup(params=self.bias_i, ids=item_id)
-        a = tf.nn.embedding_lookup(params=self.user_weight, ids=user_id)
-        b = tf.nn.embedding_lookup(params=self.item_weight, ids=item_id)
-        Yu = tf.multiply(user_beta, Xu) + user_bias
-        Yi = tf.multiply(item_beta, Xi) + item_bias
+
+        Xu = tf.nn.embedding_lookup(params=self.user_hs, ids=user_id - 1)
+        user_beta = tf.nn.embedding_lookup(params=self.beta_u, ids=user_id-1)
+        user_bias = tf.nn.embedding_lookup(params=self.bias_u, ids=user_id-1)
+        Xi = tf.nn.embedding_lookup(params=self.item_hs, ids=item_id - 1)
+        item_beta = tf.nn.embedding_lookup(params=self.beta_i, ids=item_id-1)
+        item_bias = tf.nn.embedding_lookup(params=self.bias_i, ids=item_id-1)
+
+        a = tf.nn.embedding_lookup(params=self.user_weight, ids=user_id-1)
+        b = tf.nn.embedding_lookup(params=self.item_weight, ids=item_id-1)
+
+        Yu = tf.multiply(user_beta, tf.cast(Xu,tf.float32)) + user_bias
+        Yi = tf.multiply(item_beta, tf.cast(Xi,tf.float32)) + item_bias
         outputs = tf.multiply(a, Yu) + tf.multiply(b, Yi)
         return outputs
 
     def summary(self):
-        pass
+        user_id = tf.keras.Input(shape=(), dtype=tf.int32)
+        item_id = tf.keras.Input(shape=(), dtype=tf.int32)
+        tf.keras.Model(inputs=[user_id, item_id], outputs=self.call([user_id, item_id])).summary()
 
 
 class MF_layer(Layer):
@@ -131,12 +141,11 @@ class MF_layer(Layer):
     def summary(self):
         user_id = tf.keras.Input(shape=(), dtype=tf.int32)
         item_id = tf.keras.Input(shape=(), dtype=tf.int32)
-        avg_score = tf.keras.Input(shape=(), dtype=tf.float32)
-        tf.keras.Model(inputs=[user_id, item_id, avg_score], outputs=self.call([user_id, item_id, avg_score])).summary()
+        tf.keras.Model(inputs=[user_id, item_id], outputs=self.call([user_id, item_id])).summary()
 
 
 class MyModel(tf.keras.Model):
-    def __init__(self, feature_columns, implicit=False, use_bias=True, user_reg=1e-4, item_reg=1e-4,
+    def __init__(self, feature_columns, highest_score, use_bias=True, user_reg=1e-4, item_reg=1e-4,
                  user_bias_reg=1e-4, item_bias_reg=1e-4):
         """
         MF-old Model
@@ -150,19 +159,19 @@ class MyModel(tf.keras.Model):
         """
         super(MyModel, self).__init__()
         self.sparse_feature_columns = feature_columns
-        # print(feature_columns)
         num_users, num_items = self.sparse_feature_columns[0]['feat_num'], \
                                self.sparse_feature_columns[1]['feat_num']
         latent_dim = self.sparse_feature_columns[0]['embed_dim']
-        # print(num_users,num_items)
         self.mf_layer = MF_layer(num_users, num_items, latent_dim, use_bias,
                                  user_reg, item_reg, user_bias_reg, item_bias_reg)
+        self.lr_layer = LR_layer(num_users, num_items, highest_score)
 
     def call(self, inputs):
         sparse_inputs = inputs
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
-        output = self.mf_layer([user_id, item_id])  # 前一层的输出，前一层的预测
-        return output
+        outputs = tf.multiply(self.mf_layer([user_id, item_id]), tf.constant(0.6)) + tf.multiply(
+            self.lr_layer([user_id, item_id]), tf.constant(0.4))  # 前一层的输出，前一层的预测
+        return outputs
 
     def summary(self):
         sparse_inputs = tf.keras.Input(shape=(len(self.sparse_feature_columns),), dtype=tf.int32)

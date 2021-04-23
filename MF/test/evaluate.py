@@ -1,7 +1,6 @@
 import numpy as np
-from MF.model import MF
+from MF.model import MyModel
 from MF.utils import DataSet
-import tensorflow as tf
 import pandas as pd
 import random
 
@@ -12,25 +11,33 @@ latent_dim = 15
 use_bias = False
 # ========================== Create dataset =======================
 dataset = DataSet(file=file)
-feature_columns, train, test = dataset.create_explicit_ml_1m_dataset(latent_dim, test_size, add_noise=True)
+feature_columns, train, test, hs = dataset.create_explicit_ml_1m_dataset(latent_dim, test_size, add_noise=True)
 train_X, train_y = train
-test_X, test_y = test
+test_X, test_y, _, _ = test
 # ============================Build Model=========================================
-model = MF(feature_columns, use_bias=use_bias)
+model = MyModel(feature_columns,hs, use_bias=use_bias)
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/MF-1.0/')  # with bias(avg+user_bias+item_bias)
-p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
+model.load_weights('../res/my_weights/MF-LR-1.0/')  # with bias(avg+user_bias+item_bias)
+# p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 # =========================bulid recommend metrix=======================
-data_df = dataset.get_dataDf(True)
-recommendation = np.dot(p, q.T)
-#=============加平均值=======================================
+data_df = dataset.get_dataDf()
+num_users, num_items = feature_columns[0]['feat_num'], feature_columns[1]['feat_num']
+rec_df = pd.DataFrame(np.zeros(shape=(num_users, num_items))).stack().reset_index()
+rec_df.columns = ['UserId', 'MovieId', 'Rating']
+rec_df['UserId'] += 1
+rec_df['MovieId'] += 1
+
+rec_df['Rating'] = model.predict(rec_df[['UserId', 'MovieId']].values, batch_size=1)
+# =============加平均值=======================================
+
+'''
 recommendation += data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index('UserId').values
 recommendation += data_df[['MovieId', 'item_avg_score']].drop_duplicates().set_index('MovieId').sort_index().reindex(
     index=range(1, data_df['MovieId'].max() + 1), fill_value=0).values.flatten()
 
 rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
-                      columns=range(1, recommendation.shape[0] + 1))
+                      columns=range(1, recommendation.shape[0] + 1))'''
 
 # ========================evaluate=================================
 '''
@@ -48,6 +55,7 @@ def eva_rec(train, test, N):
     all_rec = 0
     # 统计结果
     all_items = set(data_df['MovieId'].unique())
+    rec_df.set_index(['UserId','MovieId'])
     for user_id in test.index.unique().values:
         train_items = set(train.loc[user_id].values.flatten())
         test_items = set(test.loc[user_id].values.flatten())
@@ -55,8 +63,9 @@ def eva_rec(train, test, N):
         for idx in test_items:
             random_items = random.sample(other_items, 1000)
             random_items.append(idx)
-            sort_values = rec_df[user_id].loc[random_items].sort_values(ascending=False)[:N]
-            hit_rec += int(idx in set(sort_values.index.values))
+            #=================================获取排序后二级索引中的电影号=========================================
+            sort_values = rec_df.loc[(user_id,random_items),:].sort_values(ascending=False)[:N].index.get_level_values(1)
+            hit_rec += int(idx in set(sort_values.values))
 
         all_rec += len(test_items)
     return hit_rec / (all_rec * 1.0)
@@ -67,13 +76,15 @@ def eva_acc(train, test, N):
     all_acc = 0
     # 统计结果
     all_items = set(data_df['MovieId'].unique())
+    rec_df.set_index(['UserId', 'MovieId'])
     for user_id in test.index.unique().values:
         train_items = set(train.loc[user_id].values.flatten())
         test_items = set(test.loc[user_id].values.flatten())
         other_items = all_items - train_items.union(test_items)
         random_items = random.sample(other_items, 1000)
         random_items += list(test_items)
-        sort_values = rec_df[user_id].loc[random_items].sort_values(ascending=False)[:N]
+        # =================================获取排序后二级索引中的电影号=========================================
+        sort_values = rec_df.loc[(user_id, random_items), :].sort_values(ascending=False)[:N].index.get_level_values(1)
         hit_acc += len(set(sort_values.index) & test_items)
         all_acc += N
     return hit_acc / (all_acc * 1.0)
@@ -81,8 +92,7 @@ def eva_acc(train, test, N):
 
 # =========================main===============================
 if __name__ == '__main__':
-    _, test_df = test_X
-    test_index_df = pd.DataFrame(test_df, columns=['UserId', 'MovieId'])
+    test_index_df = pd.DataFrame(test_X, columns=['UserId', 'MovieId'])
     test_y_index_df = pd.Series(test_y, index=test_index_df.index)
     test_index_df.drop(index=test_y_index_df[test_y_index_df < 5].index, inplace=True)
     test_index_df = test_index_df.set_index('UserId')
