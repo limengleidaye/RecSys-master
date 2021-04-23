@@ -28,7 +28,7 @@ rec_df.columns = ['UserId', 'MovieId', 'Rating']
 rec_df['UserId'] += 1
 rec_df['MovieId'] += 1
 
-rec_df['Rating'] = model.predict(rec_df[['UserId', 'MovieId']].values, batch_size=1)
+rec_df['Rating'] = model.predict(rec_df[['UserId', 'MovieId']].values, batch_size=500)
 # =============加平均值=======================================
 
 '''

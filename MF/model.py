@@ -16,16 +16,15 @@ class LR_layer(Layer):
         super(LR_layer, self).__init__()
         self.user_num = user_num
         self.item_num = item_num
-        user_hs, item_hs = highest_score
-
+        self.user_hs, self.item_hs = highest_score
 
     def build(self, input_shape):
-        self.x_u = tf.constant(self.user_hs,
-                               name='user_highest_score'
-                               )
-        self.x_i = tf.constant(self.item_hs,
-                               name='item_highest_score'
-                               )
+        self.x_u = tf.reshape(tf.constant(self.user_hs,
+                                          name='user_highest_score'
+                                          ), shape=(-1, 1))
+        self.x_i = tf.reshape(tf.constant(self.item_hs,
+                                          name='item_highest_score'
+                                          ), shape=(-1, 1))
         self.beta_u = self.add_weight(name='beta_user_vector',
                                       shape=(self.user_num, 1),
                                       initializer=tf.random_normal_initializer(seed=0),
@@ -55,18 +54,18 @@ class LR_layer(Layer):
     def call(self, inputs, **kwargs):
         user_id, item_id = inputs
 
-        Xu = tf.nn.embedding_lookup(params=self.user_hs, ids=user_id - 1)
-        user_beta = tf.nn.embedding_lookup(params=self.beta_u, ids=user_id-1)
-        user_bias = tf.nn.embedding_lookup(params=self.bias_u, ids=user_id-1)
-        Xi = tf.nn.embedding_lookup(params=self.item_hs, ids=item_id - 1)
-        item_beta = tf.nn.embedding_lookup(params=self.beta_i, ids=item_id-1)
-        item_bias = tf.nn.embedding_lookup(params=self.bias_i, ids=item_id-1)
+        Xu = tf.nn.embedding_lookup(params=self.x_u, ids=user_id - 1)
+        user_beta = tf.nn.embedding_lookup(params=self.beta_u, ids=user_id - 1)
+        user_bias = tf.nn.embedding_lookup(params=self.bias_u, ids=user_id - 1)
+        Xi = tf.nn.embedding_lookup(params=self.x_i, ids=item_id - 1)
+        item_beta = tf.nn.embedding_lookup(params=self.beta_i, ids=item_id - 1)
+        item_bias = tf.nn.embedding_lookup(params=self.bias_i, ids=item_id - 1)
 
-        a = tf.nn.embedding_lookup(params=self.user_weight, ids=user_id-1)
-        b = tf.nn.embedding_lookup(params=self.item_weight, ids=item_id-1)
+        a = tf.nn.embedding_lookup(params=self.user_weight, ids=user_id - 1)
+        b = tf.nn.embedding_lookup(params=self.item_weight, ids=item_id - 1)
 
-        Yu = tf.multiply(user_beta, tf.cast(Xu,tf.float32)) + user_bias
-        Yi = tf.multiply(item_beta, tf.cast(Xi,tf.float32)) + item_bias
+        Yu = tf.multiply(user_beta, tf.cast(Xu, tf.float32)) + user_bias
+        Yi = tf.multiply(item_beta, tf.cast(Xi, tf.float32)) + item_bias
         outputs = tf.multiply(a, Yu) + tf.multiply(b, Yi)
         return outputs
 
@@ -103,22 +102,22 @@ class MF_layer(Layer):
     def build(self, input_shape):
         self.p = self.add_weight(name='user_latent_matrix',
                                  shape=(self.user_num, self.latent_dim),
-                                 initializer=tf.random_normal_initializer(seed=10),
+                                 initializer=tf.random_normal_initializer(seed=0),
                                  regularizer=l2(self.user_reg),
                                  trainable=True)
         self.q = self.add_weight(name='item_latent_matrix',
                                  shape=(self.item_num, self.latent_dim),
-                                 initializer=tf.random_normal_initializer(seed=15),
+                                 initializer=tf.random_normal_initializer(seed=0),
                                  regularizer=l2(self.item_reg),
                                  trainable=True)
         self.user_bias = self.add_weight(name='user_bias',
                                          shape=(self.user_num, 1),
-                                         initializer=tf.random_normal_initializer(seed=20),
+                                         initializer=tf.random_normal_initializer(seed=0),
                                          regularizer=l2(self.user_bias_reg),
                                          trainable=self.use_bias)
         self.item_bias = self.add_weight(name='item_bias',
                                          shape=(self.item_num, 1),
-                                         initializer=tf.random_normal_initializer(seed=30),
+                                         initializer=tf.random_normal_initializer(seed=0),
                                          regularizer=l2(self.item_bias_reg),
                                          trainable=self.use_bias)
 

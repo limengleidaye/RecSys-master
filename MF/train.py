@@ -25,7 +25,7 @@ if __name__ == '__main__':
     test_size = 0.2
     latent_dim = 15
     # use bias
-    use_bias = False
+    use_bias = True
     learning_rate = 0.01
     batch_size = 500
     epochs = 50
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     model = MyModel(feature_columns, hs, use_bias=use_bias)
     model.summary()
     # ============================Compile============================
-    optimizer = Adam(learning_rate=learning_rate)
+    optimizer = SGD(learning_rate=learning_rate)
     model.compile(loss='mse', optimizer=optimizer,
                   metrics=['mse'])
     # ==============================Fit==============================
@@ -52,13 +52,12 @@ if __name__ == '__main__':
             train_X,
             train_y,
             epochs=1,
-            batch_size=batch_size
-            #validation_split=0.1,  # 验证集比例
+            batch_size=batch_size,
+            validation_split=0.1,  # 验证集比例
             # callbacks=callbacks
         )
         # ===========================Test==============================
-        y_pred = model.predict(test_X[:int(len(test_X)/batch_size)*batch_size], batch_size=batch_size)
-        y_pred.append(model.predict(test_X[int(len(test_X) / batch_size) * batch_size:], batch_size=1))
+        y_pred = model.predict(test_X, batch_size=batch_size)
         y_pred = u_avg + i_avg + np.squeeze(y_pred, axis=1)
         print('test rmse: %f' % np.sqrt(np.sum(np.power(test_y - y_pred, 2)) / len(test_y)))
 

@@ -78,8 +78,8 @@ class DataSet:
         train_X = train_df[['UserId', 'MovieId']].values  # 训练集X：用户ID，物品ID
         # print("train_X",train_X)
         # ==================训练集加噪声===================================
-        train_y = train_df['R_'].values + np.random.laplace(scale=self._r / (self.epsilon * 0.62),
-                                                            size=train_df.shape[0])  # 训练集Y：评分
+        train_y = np.clip(train_df['R_'].values + np.random.laplace(scale=self._r / (self.epsilon * 0.62),
+                                                                    size=train_df.shape[0]), -2, 2)  # 训练集Y：评分
         test_X = test_df[['UserId', 'MovieId']].values
         test_y = test_df['Rating'].values.astype('int32')
         user_highest_score = self.data_df.groupby('UserId')['Rating'].max().values
