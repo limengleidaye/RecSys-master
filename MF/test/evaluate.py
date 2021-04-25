@@ -108,8 +108,8 @@ if __name__ == '__main__':
         p = eva_acc(train_index_df, test_index_df, i)
         precision.append(p)
         recall.append(r)
-    print(precision)
-    print(recall)
+        print(p)
+        print(r)
 
     # ===========================save===============================
 '''
