@@ -1,6 +1,6 @@
 import numpy as np
-from MF.model import MyModel
-from MF.utils import DataSet
+from MyModel.model import MyModel
+from MyModel.utils import DataSet
 import pandas as pd
 import random
 
@@ -18,7 +18,7 @@ test_X, test_y, _, _ = test
 model = MyModel(feature_columns,hs, use_bias=use_bias)
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/MF-LR-1.0/')  # with bias(avg+user_bias+item_bias)
+model.load_weights('../res/my_weights/MyModel-LR-1.0/')  # with bias(avg+user_bias+item_bias)
 # p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 # =========================bulid recommend metrix=======================
 data_df = dataset.get_dataDf()
