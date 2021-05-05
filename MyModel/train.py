@@ -35,19 +35,18 @@ if __name__ == '__main__':
                  keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)]
 
     # ========================== Create dataset =======================
-    feature_columns, train, test, hs = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size,
-                                                                                   add_noise=True)
+    feature_columns, train, test, dense_feature = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size)
     train_X, train_y = train
-    test_X, test_y, u_avg, i_avg = test
+    test_X, test_y = test
     # ============================Build Model==========================
-    model = MyModel(feature_columns, hs, use_bias=use_bias)
+    model = MyModel(feature_columns, dense_feature, use_bias=use_bias)
     model.summary()
     # ============================Compile============================
     optimizer = SGD(learning_rate=learning_rate)
     model.compile(loss='mse', optimizer=optimizer,
                   metrics=['mse'])
     # ==============================Fit==============================
-    for i in range(epochs):
+    for _ in range(epochs):
         history = model.fit(
             train_X,
             train_y,
@@ -57,8 +56,7 @@ if __name__ == '__main__':
             # callbacks=callbacks
         )
         # ===========================Test==============================
-        y_pred = model.predict(test_X, batch_size=batch_size)
-        y_pred = u_avg + i_avg + np.squeeze(y_pred, axis=1)
+        y_pred = np.squeeze(model.predict(test_X, batch_size=batch_size), axis=1)
         print('test rmse: %f' % np.sqrt(np.sum(np.power(test_y - y_pred, 2)) / len(test_y)))
 
     # p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()

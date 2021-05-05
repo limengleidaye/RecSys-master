@@ -17,7 +17,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 if __name__ == '__main__':
     # ========================= Hyper Parameters =======================
     # you can modify your file path
-    file = '../dataset/ml-1m/ratings.dat'
+    file = '../data/ml-1m/ratings.dat'
     test_size = 0.2
 
     latent_dim = 32
@@ -43,13 +43,14 @@ if __name__ == '__main__':
     model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate),
                     metrics=['mse'])
     # ==============================Fit==============================
-    model.fit(
-        train_X,
-        train_y,
-        epochs=epochs,
-        # callbacks=[checkpoint],
-        batch_size=batch_size,
-        validation_split=0.1
-    )
-    # ===========================Test==============================
-    print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
+    for _ in range(epochs):
+        model.fit(
+            train_X,
+            train_y,
+            epochs=1,
+            # callbacks=[checkpoint],
+            batch_size=batch_size,
+            validation_split=0.1
+        )
+        # ===========================Test==============================
+        print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))

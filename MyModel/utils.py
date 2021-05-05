@@ -44,23 +44,15 @@ class DataSet:
             lambda x: (x.sum() + u_beta * GAvg_ + np.random.laplace(scale=self._r / u_epsilon)) / (
                     len(x) + u_beta)).clip(-2,
                                            2)
-        self.data_df['R_'] = (
-                self.data_df['Rating'] - self.data_df['item_avg_score'] - self.data_df['user_avg_score']).clip(-1,
-                                                                                                               1)
 
-    def create_explicit_ml_1m_dataset(self, latent_dim=4, test_size=0.2, add_noise=False):
-        if add_noise == True:
-            self.global_effect()
-        else:
-            item_avg = self.data_df.groupby(by='MovieId')['Rating'].transform('mean')
-            self.data_df['R_'] = self.data_df['Rating'] - item_avg
-            user_avg = self.data_df.groupby(by='UserId')['Rating'].transform('mean').clip(-2, 2)
-            self.data_df['R_'] = self.data_df['Rating'] - user_avg - item_avg
+    def create_explicit_ml_1m_dataset(self, latent_dim=4, test_size=0.2):
+        self.global_effect()
 
         # 两个隐语义模型的矩阵描述
         user_num, item_num = self.data_df['UserId'].max(), self.data_df['MovieId'].max()
-        feature_columns = [DataSet.sparseFeature('user_id', user_num, latent_dim),
+        self.feature_columns = [DataSet.sparseFeature('user_id', user_num, latent_dim),
                            DataSet.sparseFeature('item_id', item_num, latent_dim)]
+
         # 划分训练集和测试集
         watch_count = self.data_df.groupby(by='UserId')['MovieId'].agg('count')  # 用户观看电影次数
         # print("watch_count:",watch_count)
@@ -78,16 +70,23 @@ class DataSet:
         train_X = train_df[['UserId', 'MovieId']].values  # 训练集X：用户ID，物品ID
         # print("train_X",train_X)
         # ==================训练集加噪声===================================
-        train_y = np.clip(train_df['R_'].values + np.random.laplace(scale=self._r / (self.epsilon * 0.62),
-                                                                    size=train_df.shape[0]), -2, 2)  # 训练集Y：评分
+        train_y = train_df['Rating'].values + np.random.laplace(scale=self._r / (self.epsilon * 0.62),
+                                                                    size=train_df.shape[0])  # 训练集Y：评分
         test_X = test_df[['UserId', 'MovieId']].values
         test_y = test_df['Rating'].values.astype('int32')
+
+        # ==========================用户、电影平均分，用户、电影最高分=====================================
+        item_avg_score = self.data_df[['MovieId', 'item_avg_score']].drop_duplicates().set_index(
+            'MovieId').sort_index().reindex(
+            index=range(1, item_num + 1), fill_value=0).values.flatten()
+        user_avg_score = self.data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index(
+            'UserId').sort_index().values.flatten()
         user_highest_score = self.data_df.groupby('UserId')['Rating'].max().values
         movie_highest_score = self.data_df.groupby('MovieId')['Rating'].max().reindex(index=range(1, item_num + 1),
                                                                                       fill_value=0).values
-        return feature_columns, (train_X, train_y), (
-            test_X, test_y, test_df['user_avg_score'].values, test_df['item_avg_score'].values), (
-                   user_highest_score, movie_highest_score)
 
-    def get_dataDf(self):
-        return self.data_df
+        return self.feature_columns, (train_X, train_y), (test_X, test_y), (
+            (user_highest_score, movie_highest_score), (user_avg_score, item_avg_score))
+
+    def get_feature(self):
+        return self.feature_columns

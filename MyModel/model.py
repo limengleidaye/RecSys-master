@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-tf.config.experimental_run_functions_eagerly(True)
+#tf.config.experimental_run_functions_eagerly(True)
 np.random.seed(0)
 
 
@@ -19,12 +19,6 @@ class LR_layer(Layer):
         self.user_hs, self.item_hs = highest_score
 
     def build(self, input_shape):
-        self.x_u = tf.reshape(tf.constant(self.user_hs,
-                                          name='user_highest_score'
-                                          ), shape=(-1, 1))
-        self.x_i = tf.reshape(tf.constant(self.item_hs,
-                                          name='item_highest_score'
-                                          ), shape=(-1, 1))
         self.beta_u = self.add_weight(name='beta_user_vector',
                                       shape=(self.user_num, 1),
                                       initializer=tf.random_normal_initializer(seed=0),
@@ -54,18 +48,18 @@ class LR_layer(Layer):
     def call(self, inputs, **kwargs):
         user_id, item_id = inputs
 
-        Xu = tf.nn.embedding_lookup(params=self.x_u, ids=user_id - 1)
+        Xu = tf.cast(tf.nn.embedding_lookup(params=self.user_hs, ids=user_id - 1), dtype=tf.float32)
         user_beta = tf.nn.embedding_lookup(params=self.beta_u, ids=user_id - 1)
         user_bias = tf.nn.embedding_lookup(params=self.bias_u, ids=user_id - 1)
-        Xi = tf.nn.embedding_lookup(params=self.x_i, ids=item_id - 1)
+        Xi = tf.cast(tf.nn.embedding_lookup(params=self.item_hs, ids=item_id - 1), dtype=tf.float32)
         item_beta = tf.nn.embedding_lookup(params=self.beta_i, ids=item_id - 1)
         item_bias = tf.nn.embedding_lookup(params=self.bias_i, ids=item_id - 1)
 
         a = tf.nn.embedding_lookup(params=self.user_weight, ids=user_id - 1)
         b = tf.nn.embedding_lookup(params=self.item_weight, ids=item_id - 1)
 
-        Yu = tf.multiply(user_beta, tf.cast(Xu, tf.float32)) + user_bias
-        Yi = tf.multiply(item_beta, tf.cast(Xi, tf.float32)) + item_bias
+        Yu = tf.multiply(user_beta, tf.reshape(Xu, shape=(-1, 1))) + user_bias
+        Yi = tf.multiply(item_beta, tf.reshape(Xi, shape=(-1, 1))) + item_bias
         outputs = tf.multiply(a, Yu) + tf.multiply(b, Yi)
         return outputs
 
@@ -144,7 +138,7 @@ class MF_layer(Layer):
 
 
 class MyModel(tf.keras.Model):
-    def __init__(self, feature_columns, highest_score, use_bias=True, user_reg=1e-4, item_reg=1e-4,
+    def __init__(self, feature_columns, dense_feature, use_bias=True, user_reg=1e-4, item_reg=1e-4,
                  user_bias_reg=1e-4, item_bias_reg=1e-4):
         """
         MyModel-old Model
@@ -158,30 +152,24 @@ class MyModel(tf.keras.Model):
         """
         super(MyModel, self).__init__()
         self.sparse_feature_columns = feature_columns
+        highest_score, avg_score = dense_feature
         num_users, num_items = self.sparse_feature_columns[0]['feat_num'], \
                                self.sparse_feature_columns[1]['feat_num']
         latent_dim = self.sparse_feature_columns[0]['embed_dim']
+        self.u_avg, self.i_avg = avg_score
         self.mf_layer = MF_layer(num_users, num_items, latent_dim, use_bias,
                                  user_reg, item_reg, user_bias_reg, item_bias_reg)
         self.lr_layer = LR_layer(num_users, num_items, highest_score)
 
-    def build(self, input_shape):
-        self.a = self.add_weight(name='a',
-                                 shape=(1, 1),
-                                 initializer=tf.constant_initializer(value=0.6),
-                                 trainable=False
-                                 )
-        self.b = self.add_weight(name='b',
-                                 shape=(1, 1),
-                                 initializer=tf.constant_initializer(value=0.4),
-                                 trainable=False
-                                 )
-
     def call(self, inputs):
         sparse_inputs = inputs
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
-        outputs = tf.multiply(self.mf_layer([user_id, item_id]), self.a) + tf.multiply(
-            self.lr_layer([user_id, item_id]), self.b)  # 前一层的输出，前一层的预测
+        outputs = tf.multiply(self.mf_layer([user_id, item_id]), tf.constant(0.9)) + tf.multiply(
+            self.lr_layer([user_id, item_id]), tf.constant(0.1)) \
+                  + tf.reshape(
+            tf.cast(tf.nn.embedding_lookup(params=self.u_avg, ids=user_id - 1) +
+                    tf.nn.embedding_lookup(params=self.i_avg, ids=item_id - 1), dtype='float32'),
+            shape=(-1, 1))  # 前一层的输出，前一层的预测
         return outputs
 
     def summary(self):

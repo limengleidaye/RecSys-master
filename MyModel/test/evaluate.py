@@ -1,6 +1,7 @@
 import numpy as np
 from MyModel.model import MyModel
 from MyModel.utils import DataSet
+from tqdm import tqdm
 import pandas as pd
 import random
 
@@ -11,33 +12,14 @@ latent_dim = 15
 use_bias = False
 # ========================== Create dataset =======================
 dataset = DataSet(file=file)
-feature_columns, train, test, hs = dataset.create_explicit_ml_1m_dataset(latent_dim, test_size, add_noise=True)
+feature_columns, train, test, dense_feature = dataset.create_explicit_ml_1m_dataset(latent_dim, test_size)
 train_X, train_y = train
-test_X, test_y, _, _ = test
+test_X, test_y = test
 # ============================Build Model=========================================
-model = MyModel(feature_columns,hs, use_bias=use_bias)
+model = MyModel(feature_columns, dense_feature, use_bias=use_bias)
 model.summary()
 # ========================load weights==================================
 model.load_weights('../res/my_weights/MyModel-LR-1.0/')  # with bias(avg+user_bias+item_bias)
-# p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
-# =========================bulid recommend metrix=======================
-data_df = dataset.get_dataDf()
-num_users, num_items = feature_columns[0]['feat_num'], feature_columns[1]['feat_num']
-rec_df = pd.DataFrame(np.zeros(shape=(num_users, num_items))).stack().reset_index()
-rec_df.columns = ['UserId', 'MovieId', 'Rating']
-rec_df['UserId'] += 1
-rec_df['MovieId'] += 1
-
-rec_df['Rating'] = model.predict(rec_df[['UserId', 'MovieId']].values, batch_size=500)
-# =============加平均值=======================================
-
-'''
-recommendation += data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index('UserId').values
-recommendation += data_df[['MovieId', 'item_avg_score']].drop_duplicates().set_index('MovieId').sort_index().reindex(
-    index=range(1, data_df['MovieId'].max() + 1), fill_value=0).values.flatten()
-
-rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] + 1),
-                      columns=range(1, recommendation.shape[0] + 1))'''
 
 # ========================evaluate=================================
 '''
@@ -49,23 +31,34 @@ rec_df = pd.DataFrame(recommendation.T, index=range(1, recommendation.shape[1] +
         4) 对每个用户的TOP-N推荐的召回率进行整合，形成一个总指标。
 '''
 
+item_num = dataset.get_feature()[1]['feat_num']
+all_items = set(range(1, item_num + 1))
+
+
+def get_recommend(id, list, N):
+    temp_list = np.empty(shape=(len(list), 2), dtype='int32')
+    temp_list[:, 0] = id
+    temp_list[:, 1] = list
+    temp_df = pd.DataFrame(temp_list, columns=['UserId', 'MovieId'])
+    temp_df['Rating'] = model.predict(temp_df.values, batch_size=500)
+    return temp_df.set_index('MovieId').sort_values(by='Rating', ascending=False).index[:N]
+
 
 def eva_rec(train, test, N):
     hit_rec = 0
     all_rec = 0
     # 统计结果
-    all_items = set(data_df['MovieId'].unique())
-    rec_df.set_index(['UserId','MovieId'])
-    for user_id in test.index.unique().values:
+    # user_num = dataset.get_feature()[0]['feat_num']
+    for user_id in tqdm(test.index.unique().values):
         train_items = set(train.loc[user_id].values.flatten())
         test_items = set(test.loc[user_id].values.flatten())
         other_items = all_items - train_items.union(test_items)
         for idx in test_items:
-            random_items = random.sample(other_items, 1000)
+            random_items = random.sample(other_items, 500)
             random_items.append(idx)
-            #=================================获取排序后二级索引中的电影号=========================================
-            sort_values = rec_df.loc[(user_id,random_items),:].sort_values(ascending=False)[:N].index.get_level_values(1)
-            hit_rec += int(idx in set(sort_values.values))
+            # =================================获取排序后二级索引中的电影号=========================================
+            sort_values = get_recommend(user_id, random_items, N)
+            hit_rec += int(idx in set(sort_values))
 
         all_rec += len(test_items)
     return hit_rec / (all_rec * 1.0)
@@ -75,17 +68,15 @@ def eva_acc(train, test, N):
     hit_acc = 0
     all_acc = 0
     # 统计结果
-    all_items = set(data_df['MovieId'].unique())
-    rec_df.set_index(['UserId', 'MovieId'])
-    for user_id in test.index.unique().values:
+    for user_id in tqdm(test.index.unique().values):
         train_items = set(train.loc[user_id].values.flatten())
         test_items = set(test.loc[user_id].values.flatten())
         other_items = all_items - train_items.union(test_items)
-        random_items = random.sample(other_items, 1000)
+        random_items = random.sample(other_items, 100)
         random_items += list(test_items)
         # =================================获取排序后二级索引中的电影号=========================================
-        sort_values = rec_df.loc[(user_id, random_items), :].sort_values(ascending=False)[:N].index.get_level_values(1)
-        hit_acc += len(set(sort_values.index) & test_items)
+        sort_values = get_recommend(user_id, random_items, N)
+        hit_acc += len(set(sort_values) & test_items)
         all_acc += N
     return hit_acc / (all_acc * 1.0)
 
@@ -97,19 +88,20 @@ if __name__ == '__main__':
     test_index_df.drop(index=test_y_index_df[test_y_index_df < 5].index, inplace=True)
     test_index_df = test_index_df.set_index('UserId')
 
-    _, train_df = train_X
-    train_index_df = pd.DataFrame(train_df[:, 1], index=train_df[:, 0], columns=['MovieId'])
+    train_index_df = pd.DataFrame(train_X, columns=['UserId', 'MovieId']).set_index('UserId')
 
     N = [5, 10, 20, 30, 50]
     precision = []
     recall = []
     for i in N:
+        print("starting evaluating, N = ", i)
         r = eva_rec(train_index_df, test_index_df, i)
+        print("=================evaluate recall finished================")
         p = eva_acc(train_index_df, test_index_df, i)
+        print("=================evaluate accuracy finished================")
         precision.append(p)
         recall.append(r)
-        print(p)
-        print(r)
+        print('N:%d\tprecisioin=%.4f\trecall=%.4f\t' % (i, p, r))
 
     # ===========================save===============================
 '''
