@@ -1,12 +1,8 @@
 import numpy as np
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers import SGD
-from matplotlib import pyplot as plt
 import keras
 from time import time
-# from tensorflow_privacy.privacy.optimizers import dp_optimizer
-import pandas as pd
-import tensorflow as tf
 
 from model import MyModel
 from utils import DataSet
@@ -23,12 +19,12 @@ if __name__ == '__main__':
 
     file = '../data/ml-1m/ratings.dat'
     test_size = 0.2
-    latent_dim = 15
+    latent_dim = 16
     # use bias
     use_bias = True
-    learning_rate = 0.01
-    batch_size = 500
-    epochs = 50
+    learning_rate = 0.001
+    batch_size = 512
+    epochs = 100
 
     output_model_file = os.path.join(".\\res\\callbacks", str(time()))
     callbacks = [keras.callbacks.ModelCheckpoint(output_model_file, save_best_only=True), \
@@ -51,8 +47,8 @@ if __name__ == '__main__':
             train_X,
             train_y,
             epochs=1,
-            batch_size=batch_size,
-            validation_split=0.1,  # 验证集比例
+            batch_size=batch_size
+            #validation_split=0.1,  # 验证集比例
             # callbacks=callbacks
         )
         # ===========================Test==============================
@@ -62,5 +58,5 @@ if __name__ == '__main__':
 
     # ===========================Save==============================
     # pd.DataFrame(history.history).to_csv('./res/log/MyModel.csv',index=False)
-    model.save_weights('./res/weights/MyModel-LR-1.0/')
+    model.save_weights('./res/weights/MyModel-LR/')
     # print('export saved callbacks.')

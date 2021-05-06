@@ -24,16 +24,16 @@ if __name__ == '__main__':
     # use bias
     use_bias = True
 
-    learning_rate = 0.01
+    learning_rate = 0.001
     batch_size = 512
-    epochs = 10
+    epochs = 50
 
     # ========================== Create dataset =======================
     feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
-    model = MF(feature_columns, use_bias)
+    model = MF(feature_columns, use_bias=use_bias)
     model.summary()
     # ============================model checkpoint======================
     # check_path = '../save/mf_weights.epoch_{epoch:04d}.val_loss_{val_loss:.4f}.ckpt'
@@ -49,8 +49,8 @@ if __name__ == '__main__':
             train_y,
             epochs=1,
             # callbacks=[checkpoint],
-            batch_size=batch_size,
-            validation_split=0.1
+            batch_size=batch_size
+            #validation_split=0.1
         )
         # ===========================Test==============================
         print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
