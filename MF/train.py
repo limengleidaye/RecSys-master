@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # use bias
     use_bias = True
 
-    learning_rate = 0.001
+    learning_rate = 0.01
     batch_size = 512
     epochs = 10
 
@@ -54,3 +54,4 @@ if __name__ == '__main__':
         )
         # ===========================Test==============================
         print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
+    model.save_weights('./res/weights/MF/')

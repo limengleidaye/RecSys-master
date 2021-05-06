@@ -56,12 +56,11 @@ if __name__ == '__main__':
             # callbacks=callbacks
         )
         # ===========================Test==============================
-        y_pred = np.squeeze(model.predict(test_X, batch_size=batch_size), axis=1)
-        print('test rmse: %f' % np.sqrt(np.sum(np.power(test_y - y_pred, 2)) / len(test_y)))
+        print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
 
     # p, q, user_bias, item_bias = model.get_layer("mf_layer").get_weights()
 
     # ===========================Save==============================
     # pd.DataFrame(history.history).to_csv('./res/log/MyModel.csv',index=False)
-    model.save_weights('./res/my_weights/MyModel-LR-1.0/')
+    model.save_weights('./res/weights/MyModel-LR-1.0/')
     # print('export saved callbacks.')
