@@ -24,7 +24,7 @@ if __name__ == '__main__':
     # use bias
     use_bias = True
 
-    learning_rate = 0.01
+    learning_rate = 0.001
     batch_size = 512
     epochs = 10
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
-    model = MF(feature_columns, use_bias)
+    model = MF(feature_columns, use_bias=use_bias)
     model.summary()
     # ============================model checkpoint======================
     # check_path = '../save/mf_weights.epoch_{epoch:04d}.val_loss_{val_loss:.4f}.ckpt'

@@ -164,8 +164,8 @@ class MyModel(tf.keras.Model):
     def call(self, inputs):
         sparse_inputs = inputs
         user_id, item_id = sparse_inputs[:, 0], sparse_inputs[:, 1]
-        outputs = tf.multiply(self.mf_layer([user_id, item_id]), tf.constant(0.9)) + tf.multiply(
-            self.lr_layer([user_id, item_id]), tf.constant(0.1)) \
+        outputs = tf.multiply(self.mf_layer([user_id, item_id]), tf.constant(0.22)) + tf.multiply(
+            self.lr_layer([user_id, item_id]), tf.constant(0.78)) \
                   + tf.reshape(
             tf.cast(tf.nn.embedding_lookup(params=self.u_avg, ids=user_id - 1) +
                     tf.nn.embedding_lookup(params=self.i_avg, ids=item_id - 1), dtype='float32'),

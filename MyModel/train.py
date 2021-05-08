@@ -23,10 +23,10 @@ if __name__ == '__main__':
 
     file = '../data/ml-1m/ratings.dat'
     test_size = 0.2
-    latent_dim = 15
+    latent_dim = 30
     # use bias
     use_bias = True
-    learning_rate = 0.01
+    learning_rate = 0.001
     batch_size = 500
     epochs = 50
 
