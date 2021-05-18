@@ -2,7 +2,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.losses import binary_crossentropy
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.metrics import AUC
+from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.metrics import Recall
 
 from model import MF
 from utils import create_explicit_ml_1m_dataset
@@ -24,12 +25,12 @@ if __name__ == '__main__':
     # use bias
     use_bias = True
 
-    learning_rate = 0.001
+    learning_rate = 0.01
     batch_size = 512
     epochs = 50
 
     # ========================== Create dataset =======================
-    feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim, test_size)
+    feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim=latent_dim, test_size=test_size)
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
@@ -43,15 +44,14 @@ if __name__ == '__main__':
     model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate),
                     metrics=['mse'])
     # ==============================Fit==============================
-    for _ in range(epochs):
-        model.fit(
-            train_X,
-            train_y,
-            epochs=1,
-            # callbacks=[checkpoint],
-            batch_size=batch_size
-            #validation_split=0.1
-        )
-        # ===========================Test==============================
-        print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
+    model.fit(
+        train_X,
+        train_y,
+        epochs=epochs,
+        # callbacks=[checkpoint],
+        batch_size=batch_size
+        #validation_split=0.1
+    )
+    # ===========================Test==============================
+    print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
     model.save_weights('./res/weights/MF/')

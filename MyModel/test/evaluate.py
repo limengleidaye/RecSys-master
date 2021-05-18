@@ -17,10 +17,12 @@ train_X, train_y = train
 test_X, test_y = test
 # ============================Build Model=========================================
 model = MyModel(feature_columns, dense_feature, use_bias=use_bias)
+model.compile(metrics=['mae', 'mse'])
 model.summary()
 # ========================load weights==================================
 model.load_weights('../res/my_weights/MyModel-LR-1.0/')  # with bias(avg+user_bias+item_bias)
-
+print('test mae: %f', model.evaluate(test_X, test_y)[1])
+print('test rmse: %f', np.sqrt(model.evaluate(test_X, test_y)[2]))
 # ========================evaluate=================================
 '''
 对于每个用户 

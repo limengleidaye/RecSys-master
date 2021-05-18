@@ -17,7 +17,7 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = '6, 7'
 
     # ========================= Hyper Parameters =======================
-    file = '../dataset/ml-1m/ratings.dat'
+    file = '../data/ml-1m/ratings.dat'
     trans_score = 1
     test_neg_num = 100
 

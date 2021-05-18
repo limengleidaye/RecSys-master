@@ -51,7 +51,7 @@ class DataSet:
         # 两个隐语义模型的矩阵描述
         user_num, item_num = self.data_df['UserId'].max(), self.data_df['MovieId'].max()
         self.feature_columns = [DataSet.sparseFeature('user_id', user_num, latent_dim),
-                           DataSet.sparseFeature('item_id', item_num, latent_dim)]
+                                DataSet.sparseFeature('item_id', item_num, latent_dim)]
 
         # 划分训练集和测试集
         watch_count = self.data_df.groupby(by='UserId')['MovieId'].agg('count')  # 用户观看电影次数
@@ -70,8 +70,9 @@ class DataSet:
         train_X = train_df[['UserId', 'MovieId']].values  # 训练集X：用户ID，物品ID
         # print("train_X",train_X)
         # ==================训练集加噪声===================================
-        train_y = train_df['Rating'].values + np.random.laplace(scale=self._r / (self.epsilon * 0.62),
-                                                                    size=train_df.shape[0])  # 训练集Y：评分
+        train_y = train_df[
+                      'Rating'].values + np.random.laplace(scale=self._r / (self.epsilon * 0.62),
+                                                           size=train_df.shape[0])  # 训练集Y：评分
         test_X = test_df[['UserId', 'MovieId']].values
         test_y = test_df['Rating'].values.astype('int32')
 
@@ -81,9 +82,10 @@ class DataSet:
             index=range(1, item_num + 1), fill_value=0).values.flatten()
         user_avg_score = self.data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index(
             'UserId').sort_index().values.flatten()
-        user_highest_score = self.data_df.groupby('UserId')['Rating'].max().values
-        movie_highest_score = self.data_df.groupby('MovieId')['Rating'].max().reindex(index=range(1, item_num + 1),
-                                                                                      fill_value=0).values
+        user_highest_score = self.data_df.groupby('UserId')['Rating'].apply(lambda x: x.mode()[0]).values
+        movie_highest_score = self.data_df.groupby('MovieId')['Rating'].apply(lambda x: x.mode()[0]).reindex(
+            index=range(1, item_num + 1),
+            fill_value=0).values
 
         return self.feature_columns, (train_X, train_y), (test_X, test_y), (
             (user_highest_score, movie_highest_score), (user_avg_score, item_avg_score))

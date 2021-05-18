@@ -22,8 +22,8 @@ if __name__ == '__main__':
     # you can modify your file path
 
     file = '../data/ml-1m/ratings.dat'
-    test_size = 0.2
-    latent_dim = 30
+    test_size = 0.1
+    latent_dim = 10
     # use bias
     use_bias = True
     learning_rate = 0.001
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                  keras.callbacks.EarlyStopping(patience=5, min_delta=1e-3)]
 
     # ========================== Create dataset =======================
-    feature_columns, train, test, dense_feature = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size)
+    feature_columns, train, test, dense_feature = DataSet(file).create_explicit_ml_1m_dataset(latent_dim, test_size=test_size)
     train_X, train_y = train
     test_X, test_y = test
     # ============================Build Model==========================
