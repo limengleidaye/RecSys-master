@@ -25,9 +25,9 @@ if __name__ == '__main__':
     # use bias
     use_bias = True
 
-    learning_rate = 0.01
+    learning_rate = 0.001
     batch_size = 512
-    epochs = 50
+    epochs = 30
 
     # ========================== Create dataset =======================
     feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim=latent_dim, test_size=test_size)
@@ -44,14 +44,15 @@ if __name__ == '__main__':
     model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate),
                     metrics=['mse'])
     # ==============================Fit==============================
-    model.fit(
-        train_X,
-        train_y,
-        epochs=epochs,
-        # callbacks=[checkpoint],
-        batch_size=batch_size
-        #validation_split=0.1
-    )
-    # ===========================Test==============================
-    print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
+    for _ in range(epochs):
+        model.fit(
+            train_X,
+            train_y,
+            epochs=1,
+            # callbacks=[checkpoint],
+            batch_size=batch_size
+            #validation_split=0.1
+        )
+        # ===========================Test==============================
+        print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
     model.save_weights('./res/weights/MF/')
