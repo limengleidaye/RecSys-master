@@ -7,7 +7,7 @@ import random
 
 file = '../../data/ml-1m/ratings.dat'
 test_size = 0.2
-latent_dim = 15
+latent_dim = 30
 # use bias
 use_bias = False
 # ========================== Create dataset =======================
@@ -20,9 +20,9 @@ model = MyModel(feature_columns, dense_feature, use_bias=use_bias)
 model.compile(metrics=['mae', 'mse'])
 model.summary()
 # ========================load weights==================================
-model.load_weights('../res/my_weights/MyModel-LR-1.0/')  # with bias(avg+user_bias+item_bias)
-print('test mae: %f', model.evaluate(test_X, test_y)[1])
-print('test rmse: %f', np.sqrt(model.evaluate(test_X, test_y)[2]))
+model.load_weights('../res/weights/MyModel-LR-1m/')  # with bias(avg+user_bias+item_bias)
+print('test mae: %.6f'% model.evaluate(test_X, test_y)[1])
+print('test rmse: %.6f'% np.sqrt(model.evaluate(test_X, test_y)[2]))
 # ========================evaluate=================================
 '''
 对于每个用户 
@@ -69,31 +69,15 @@ def rec(train, test, N):
 
 # =========================main===============================
 if __name__ == '__main__':
-    test_index_df = pd.DataFrame(test_X, columns=['UserId', 'MovieId'])
-    test_y_index_df = pd.Series(test_y, index=test_index_df.index)
-    test_index_df.drop(index=test_y_index_df[test_y_index_df < 5].index, inplace=True)
-    test_index_df = test_index_df.set_index('UserId')
-
-    train_index_df = pd.DataFrame(train_X, columns=['UserId', 'MovieId']).set_index('UserId')
-
-    N = [5, 10, 20, 30, 50]
-    precision = []
-    recall = []
-    for i in N:
-        print("starting evaluating, N = ", i)
-        r = eva_rec(train_index_df, test_index_df, i)
-        print("=================evaluate recall finished================")
-        p = eva_acc(train_index_df, test_index_df, i)
-        print("=================evaluate accuracy finished================")
-        precision.append(p)
-        recall.append(r)
-        print('N:%d\tprecisioin=%.4f\trecall=%.4f\t' % (i, p, r))
-
-    # ===========================save===============================
-'''
-    pre_dataFrame = pd.read_csv('../../precision.csv', engine='python')
-    rec_dataFrame = pd.read_csv('../../recall.csv', engine='python')
-    pre_dataFrame['MF_noise']=precision
-    rec_dataFrame['MF_noise']=recall
-    pre_dataFrame.to_csv('../../precision.csv',index=False)
-    rec_dataFrame.to_csv('../../recall.csv',index=False)'''
+    trainSet = {}
+    testSet = {}
+    for line in train_X:
+        user, movie = line
+        trainSet.setdefault(user, set())
+        trainSet[user].add(movie)
+    for line in zip(test_X, test_y):
+        [user, movie], rating = line
+        if rating > 4:
+            testSet.setdefault(user, set())
+            testSet[user].add(movie)
+    rec(trainSet, testSet, [5, 10, 15, 20, 30, 50])

@@ -22,8 +22,8 @@ if __name__ == '__main__':
     # you can modify your file path
 
     file = '../data/ml-1m/ratings.dat'
-    test_size = 0.1
-    latent_dim = 10
+    test_size = 0.2
+    latent_dim = 30
     # use bias
     use_bias = True
     learning_rate = 0.001
@@ -52,7 +52,7 @@ if __name__ == '__main__':
             train_y,
             epochs=1,
             batch_size=batch_size,
-            validation_split=0.1,  # 验证集比例
+            validation_split=0.1 # 验证集比例
             # callbacks=callbacks
         )
         # ===========================Test==============================
@@ -62,5 +62,5 @@ if __name__ == '__main__':
 
     # ===========================Save==============================
     # pd.DataFrame(history.history).to_csv('./res/log/MyModel.csv',index=False)
-    model.save_weights('./res/weights/MyModel-LR-1.0/')
+    model.save_weights('./res/weights/MyModel-LR-1m/')
     # print('export saved callbacks.')

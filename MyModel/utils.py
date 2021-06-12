@@ -4,10 +4,9 @@ from tqdm import tqdm
 
 
 class DataSet:
-    def __init__(self, file, epsilon=10):
+    def __init__(self, file, epsilon=5):
         np.random.seed(0)
-        self.data_df = pd.read_csv(file, sep="::", engine='python',
-                                   names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
+        self.data_df = pd.read_csv(file, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
         self.data_len = len(self.data_df)
         self.epsilon = epsilon
 
@@ -81,8 +80,11 @@ class DataSet:
             'MovieId').sort_index().reindex(
             index=range(1, item_num + 1), fill_value=0).values.flatten()
         user_avg_score = self.data_df[['UserId', 'user_avg_score']].drop_duplicates().set_index(
-            'UserId').sort_index().values.flatten()
-        user_highest_score = self.data_df.groupby('UserId')['Rating'].apply(lambda x: x.mode()[0]).values
+            'UserId').sort_index().reindex(
+            index=range(1, user_num + 1), fill_value=0).values.flatten()
+        user_highest_score = self.data_df.groupby('UserId')['Rating'].apply(lambda x: x.mode()[0]).reindex(
+            index=range(1, user_num + 1),
+            fill_value=0).values
         movie_highest_score = self.data_df.groupby('MovieId')['Rating'].apply(lambda x: x.mode()[0]).reindex(
             index=range(1, item_num + 1),
             fill_value=0).values

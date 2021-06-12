@@ -3,6 +3,7 @@ import random
 import math
 from operator import itemgetter
 import pandas as pd
+from tqdm import tqdm
 
 
 class UserBasedCF():
@@ -10,7 +11,7 @@ class UserBasedCF():
     def __init__(self):
         # 找到与目标用户兴趣相似的20个用户，为其推荐10部电影
         self.n_sim_user = 100
-        self.n_rec_movie = [5,10,20,30,50]
+        self.n_rec_movie = [5, 10, 15, 20, 30, 50]
 
         # 将数据集划分为训练集和测试集
         self.trainSet = {}
@@ -23,25 +24,33 @@ class UserBasedCF():
         print('Similar user number = %d' % self.n_sim_user)
         print('Recommneded movie number = ' + str(self.n_rec_movie))
 
-
     # 读文件得到“用户-电影”数据
-    def get_dataset(self, filename, pivot=0.75):
+    def get_dataset(self, filename, pivot=0.2):
         trainSet_len = 0
         testSet_len = 0
-        for line in self.load_file(filename):
-            user, movie, rating, timestamp = line.split('::')
-            if random.random() < pivot:
-                self.trainSet.setdefault(user, {})
-                self.trainSet[user][movie] = rating
-                trainSet_len += 1
-            else:
-                self.testSet.setdefault(user, {})
-                self.testSet[user][movie] = rating
-                testSet_len += 1
+        data_df = pd.read_csv(filename, sep="::", engine='python', names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
+        watch_count = data_df.groupby(by='UserId')['MovieId'].agg('count')
+        test_df = pd.concat([
+            data_df[data_df.UserId == i].iloc[int((1 - pivot) * watch_count[i]):] for i in
+            tqdm(watch_count.index)],
+            axis=0)
+        test_df = test_df.reset_index()
+        train_df = data_df.drop(labels=test_df['index'])
+        train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
+        test_df = test_df.drop(['index', 'Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
+        train = train_df[['UserId', 'MovieId', 'Rating']].values
+        test = test_df[['UserId', 'MovieId', 'Rating']].values
+        for line in train:
+            user, movie, rating = line
+            self.trainSet.setdefault(user.astype('int'), {})
+            self.trainSet[user.astype('int')][movie.astype('int')] = rating
+        for line in test:
+            user, movie, rating = line
+            self.testSet.setdefault(user.astype('int'), {})
+            self.testSet[user.astype('int')][movie.astype('int')] = rating
         print('Split trainingSet and testSet success!')
         print('TrainSet = %s' % trainSet_len)
         print('TestSet = %s' % testSet_len)
-
 
     # 读文件，返回文件的每一行
     def load_file(self, filename):
@@ -51,7 +60,6 @@ class UserBasedCF():
                     continue
                 yield line.strip('\r\n')
         print('Load %s success!' % filename)
-
 
     # 计算用户之间的相似度
     def calc_user_sim(self):
@@ -87,9 +95,8 @@ class UserBasedCF():
                 self.user_sim_matrix[u][v] = count / math.sqrt(len(self.trainSet[u]) * len(self.trainSet[v]))
         print('Calculate user similarity matrix success!')
 
-
     # 针对目标用户U，找到其最相似的K个用户，产生N个推荐
-    def recommend(self, user,N):
+    def recommend(self, user, N):
         K = self.n_sim_user
         rank = {}
         watched_movies = self.trainSet[user]
@@ -102,7 +109,6 @@ class UserBasedCF():
                 rank.setdefault(movie, 0)
                 rank[movie] += wuv
         return sorted(rank.items(), key=itemgetter(1), reverse=True)[0:N]
-
 
     # 产生推荐并通过准确率、召回率和覆盖率进行评估
     def evaluate(self):
@@ -118,7 +124,7 @@ class UserBasedCF():
         for N in self.n_rec_movie:
             for i, user, in enumerate(self.trainSet):
                 test_movies = self.testSet.get(user, {})
-                rec_movies = self.recommend(user,N)
+                rec_movies = self.recommend(user, N)
                 for movie, w in rec_movies:
                     if movie in test_movies:
                         hit += 1
@@ -132,13 +138,6 @@ class UserBasedCF():
             pre_list.append(precision)
             recall_list.append(recall)
             print('N:%d\tprecisioin=%.4f\trecall=%.4f\tcoverage=%.4f' % (N, precision, recall, coverage))
-        # ==========================save log======================================
-        pre_dataFrame = pd.read_csv('../precision.csv', engine='python')
-        pre_dataFrame['UserCF'] = pre_list
-        pre_dataFrame.to_csv('../precision.csv', index=False)
-        rec_dataFrame = pd.read_csv('../recall.csv', engine='python')
-        rec_dataFrame['UserCF'] = recall_list
-        rec_dataFrame.to_csv('../recall.csv', index=False)
 
 
 if __name__ == '__main__':
