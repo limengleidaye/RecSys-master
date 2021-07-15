@@ -18,7 +18,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 if __name__ == '__main__':
     # ========================= Hyper Parameters =======================
     # you can modify your file path
-    file = '../data/ml-1m/ratings.dat'
+    file = '../data/ml-100k/u.data'
     test_size = 0.2
 
     latent_dim = 32
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     learning_rate = 0.001
     batch_size = 512
-    epochs = 30
+    epochs = 15
 
     # ========================== Create dataset =======================
     feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim=latent_dim, test_size=test_size)

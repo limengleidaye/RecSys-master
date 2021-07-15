@@ -1,5 +1,6 @@
 import pandas as pd
 from tqdm import tqdm
+import numpy as np
 
 
 def sparseFeature(feat, feat_num, embed_dim=4):
@@ -32,7 +33,8 @@ def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2):
     :param test_size: ratio of test dataset
     :return: user_num, item_num, train_df, test_df
     """
-    data_df = pd.read_csv(file, sep="::", engine='python',
+    np.random.seed(0)
+    data_df = pd.read_csv(file, sep="	", engine='python',
                      names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
     data_df['avg_score'] = data_df.groupby(by='UserId')['Rating'].transform('mean')
     # feature columns
@@ -41,16 +43,18 @@ def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2):
                        [sparseFeature('user_id', user_num, latent_dim),
                         sparseFeature('item_id', item_num, latent_dim)]]
     # split train dataset and test dataset
-    watch_count = data_df.groupby(by='UserId')['MovieId'].agg('count')
-    test_df = pd.concat([
-        data_df[data_df.UserId == i].iloc[int(0.8 * watch_count[i]):] for i in tqdm(watch_count.index)], axis=0)
+    data_df['random'] = np.random.random(size=len(data_df))
+    test_df = data_df[data_df['random'] < test_size]
+    # watch_count = data_df.groupby(by='UserId')['MovieId'].agg('count')
+    # test_df = pd.concat([
+    #     data_df[data_df.UserId == i].iloc[int(0.8 * watch_count[i]):] for i in tqdm(watch_count.index)], axis=0)
     test_df = test_df.reset_index()
     train_df = data_df.drop(labels=test_df['index'])
     train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
     test_df = test_df.drop(['index', 'Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
 
     train_X = [train_df['avg_score'].values, train_df[['UserId', 'MovieId']].values]
-    train_y = train_df['Rating'].values.astype('int32')
+    train_y = train_df['Rating'].values + np.random.laplace(scale=4 / 10, size=len(train_df))
     test_X = [test_df['avg_score'].values, test_df[['UserId', 'MovieId']].values]
     test_y = test_df['Rating'].values.astype('int32')
     return feature_columns, (train_X, train_y), (test_X, test_y)
