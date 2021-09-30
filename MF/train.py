@@ -18,16 +18,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 if __name__ == '__main__':
     # ========================= Hyper Parameters =======================
     # you can modify your file path
-    file = '../data/ml-100k/u.data'
-    test_size = 0.2
+    file = '../data/yelp/yelp_academic_dataset_review.csv'
+    test_size = 0.05
 
     latent_dim = 32
-    # use bias
+    # use bias.
     use_bias = True
 
     learning_rate = 0.001
     batch_size = 512
-    epochs = 15
+    epochs = 30
 
     # ========================== Create dataset =======================
     feature_columns, train, test = create_explicit_ml_1m_dataset(file, latent_dim=latent_dim, test_size=test_size)
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     #                                                 verbose=1, period=5)
     # ============================Compile============================
     model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate),
-                    metrics=['mse'])
+                    metrics=['mse','mae'])
     # ==============================Fit==============================
     for _ in range(epochs):
         model.fit(
@@ -55,4 +55,5 @@ if __name__ == '__main__':
         )
         # ===========================Test==============================
         print('test rmse: %f' % np.sqrt(model.evaluate(test_X, test_y)[1]))
+        #print('test mae: %f' % model.evaluate(test_X, test_y)[2])
     model.save_weights('./res/weights/MF/')

@@ -30,14 +30,14 @@ def denseFeature(feat):
 
 
 np.random.seed(0)
-file = '../data/ml-100k/u.data'
+file = '../data/yelp/yelp_academic_dataset_review.csv'
 test_size = 0.2
 
 latent_dim = 32
 # use bias
 use_bias = True
-data_df = pd.read_csv(file, sep="	", engine='python',
-                      names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
+data_df = pd.read_csv(file, sep=",", engine='python',
+                      names=['UserId', 'MovieId', 'Rating'])
 data_df['avg_score'] = data_df.groupby(by='UserId')['Rating'].transform('mean')
 # feature columns
 user_num, item_num = data_df['UserId'].max() + 1, data_df['MovieId'].max() + 1
@@ -52,8 +52,8 @@ test_df = data_df[data_df['random'] < test_size]
 #     data_df[data_df.UserId == i].iloc[int(0.8 * watch_count[i]):] for i in tqdm(watch_count.index)], axis=0)
 test_df = test_df.reset_index()
 train_df = data_df.drop(labels=test_df['index'])
-train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
-test_df = test_df.drop(['index', 'Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
+# train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
+test_df = test_df.drop(['index'], axis=1).sample(frac=1.).reset_index(drop=True)
 
 train_X = [train_df['avg_score'].values, train_df[['UserId', 'MovieId']].values]
 train_y = train_df['Rating'].values.astype('int32')
@@ -70,7 +70,7 @@ print('test rmse: %.5f' % np.sqrt(model.evaluate(test_X, test_y)[2]))
 
 p, q, user_bias, item_bias = model.get_layer('mf_layer').get_weights()
 avg = data_df.groupby('UserId')['Rating'].mean().values
-avg = np.expand_dims(np.insert(avg, 0, 0), axis=1)
+avg = np.expand_dims(avg, axis=1)
 recommend_matrix = np.dot(p, q.T) + user_bias + item_bias.T + avg
 
 
@@ -91,11 +91,13 @@ def rec(train, test, N):
     # 统计结果
     # user_num = dataset.get_feature()[0]['feat_num']
     for user_id in tqdm(test):
+        if user_id not in train.keys():
+            continue
         train_items = train[user_id]
         test_items = test[user_id]
         other_items = all_items - train_items.union(test_items)
         for idx in test_items:
-            random_items = random.sample(other_items, 500)
+            random_items = random.sample(other_items, 50)
             random_items.append(idx)
             # =================================获取排序后二级索引中的电影号=========================================
             sort_values = get_recommend(user_id, random_items, rev=True)
@@ -111,14 +113,17 @@ def auc(train, test, Nu):
     item_num = feature_columns[1][1]['feat_num']
     all_items = set(range(1, item_num))
 
-    test_count = len(test)
+    test_count = 0
     AUC = 0
     for user_id in tqdm(test):
+        if user_id not in train.keys():
+            continue
+        test_count += 1
         train_items = train[user_id]
         test_items = test[user_id]
         Pu = len(test_items)
         other_items = all_items - train_items.union(test_items)
-        random_items = random.sample(other_items, 100)
+        random_items = random.sample(other_items, Nu)
         random_items = random_items + list(test_items)
         sort_values = get_recommend(user_id, random_items, rev=False)
         rank_sum = 0
@@ -127,7 +132,7 @@ def auc(train, test, Nu):
 
         auc_u = (rank_sum - Pu * (Pu + 1) / 2) / (Pu * Nu)
         AUC += auc_u
-    print("AUC:%.5f\t" % (AUC/test_count))
+    print("AUC:%.5f\t" % (AUC / test_count))
 
 
 # =========================main===============================
@@ -144,4 +149,4 @@ if __name__ == '__main__':
             testSet.setdefault(user, set())
             testSet[user].add(movie)
     rec(trainSet, testSet, [5, 10, 15, 20, 25, 30, 35])
-    auc(trainSet, testSet, 100)
+    auc(trainSet, testSet, 200)

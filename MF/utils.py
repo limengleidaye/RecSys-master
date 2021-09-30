@@ -33,9 +33,9 @@ def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2):
     :param test_size: ratio of test dataset
     :return: user_num, item_num, train_df, test_df
     """
-    np.random.seed(0)
-    data_df = pd.read_csv(file, sep="	", engine='python',
-                     names=['UserId', 'MovieId', 'Rating', 'Timestamp'])
+    #np.random.seed(0)
+    data_df = pd.read_csv(file, sep=",", engine='python',
+                     names=['UserId', 'MovieId', 'Rating'])
     data_df['avg_score'] = data_df.groupby(by='UserId')['Rating'].transform('mean')
     # feature columns
     user_num, item_num = data_df['UserId'].max() + 1, data_df['MovieId'].max() + 1
@@ -50,8 +50,8 @@ def create_explicit_ml_1m_dataset(file, latent_dim=4, test_size=0.2):
     #     data_df[data_df.UserId == i].iloc[int(0.8 * watch_count[i]):] for i in tqdm(watch_count.index)], axis=0)
     test_df = test_df.reset_index()
     train_df = data_df.drop(labels=test_df['index'])
-    train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
-    test_df = test_df.drop(['index', 'Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
+    #train_df = train_df.drop(['Timestamp'], axis=1).sample(frac=1.).reset_index(drop=True)
+    test_df = test_df.drop(['index'], axis=1).sample(frac=1.).reset_index(drop=True)
 
     train_X = [train_df['avg_score'].values, train_df[['UserId', 'MovieId']].values]
     train_y = train_df['Rating'].values + np.random.laplace(scale=4 / 10, size=len(train_df))
